@@ -1,0 +1,1022 @@
+// Smart Stadium OS + Digital Twin — Prisma Schema
+// Covers all 16 modules. Phase 1 modules (auth/users, dashboard, stadium-twin,
+// tournaments, ticketing) have full CRUD APIs. Phase 2 modules have models +
+// seed data (feeding Dashboard KPIs) but no dedicated management UI yet.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// ENUMS
+// ---------------------------------------------------------------------------
+
+enum Role {
+  SUPER_ADMIN
+  STADIUM_ADMIN
+  TOURNAMENT_ORGANIZER
+  SECURITY_OFFICER
+  MEDICAL_TEAM
+  MAINTENANCE_TEAM
+  VENDOR
+  VOLUNTEER
+  REFEREE
+  FAN
+}
+
+enum ZoneType {
+  GATE
+  PARKING
+  MEDICAL
+  FIRE_STATION
+  WASHROOM
+  FOOD_COURT
+  VENDOR_STALL
+  EV_CHARGING
+  EMERGENCY_ROUTE
+  SEATING_BLOCK
+  CCTV
+}
+
+enum ZoneStatus {
+  OPERATIONAL
+  DEGRADED
+  CLOSED
+}
+
+enum DensityLevel {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum EquipmentStatus {
+  HEALTHY
+  WARNING
+  CRITICAL
+  OFFLINE
+}
+
+enum TournamentStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum FixtureStatus {
+  SCHEDULED
+  LIVE
+  COMPLETED
+  POSTPONED
+  CANCELLED
+}
+
+enum MatchStatus {
+  NOT_STARTED
+  FIRST_HALF
+  HALFTIME
+  SECOND_HALF
+  EXTRA_TIME
+  FULL_TIME
+  ABANDONED
+}
+
+enum SeatTier {
+  GENERAL
+  PREMIUM
+  VIP
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+}
+
+enum TicketStatus {
+  VALID
+  USED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CARD
+  UPI
+  NET_BANKING
+  WALLET
+}
+
+enum RefundStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PROCESSED
+}
+
+enum ParkingSlotType {
+  STANDARD
+  EV
+  VIP
+  DISABLED
+}
+
+enum ParkingSlotStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  OUT_OF_SERVICE
+}
+
+enum ReservationStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum NotificationType {
+  GENERAL
+  MATCH
+  BOOKING
+  EMERGENCY
+  MAINTENANCE
+}
+
+enum LostFoundStatus {
+  REPORTED
+  MATCHED
+  CLAIMED
+  CLOSED
+}
+
+enum OrderStatus {
+  PLACED
+  PREPARING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+  CLOSED
+}
+
+enum SOSType {
+  MEDICAL
+  FIRE
+  SECURITY
+  OTHER
+}
+
+enum SOSStatus {
+  OPEN
+  DISPATCHED
+  RESOLVED
+  CANCELLED
+}
+
+enum AssetStatus {
+  ACTIVE
+  UNDER_MAINTENANCE
+  RETIRED
+}
+
+enum WorkOrderPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum WorkOrderStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum WeatherCondition {
+  CLEAR
+  CLOUDY
+  RAIN
+  STORM
+  FOG
+  EXTREME_HEAT
+}
+
+// ---------------------------------------------------------------------------
+// CORE / AUTH / ORGANIZATION
+// ---------------------------------------------------------------------------
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  logoUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  stadiums  Stadium[]
+  apiKeys   ApiKey[]
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  passwordHash    String
+  name            String
+  phone           String?
+  avatarUrl       String?
+  role            Role      @default(FAN)
+  isActive        Boolean   @default(true)
+  organizationId  String?
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  auditLogs           AuditLog[]
+  bookings            Booking[]
+  notifications       Notification[]
+  lostFoundReports    LostFoundItem[]
+  foodOrders          FoodOrder[]
+  parkingReservations ParkingReservation[]
+  reportedIncidents   Incident[]           @relation("IncidentReportedBy")
+  assignedIncidents   Incident[]           @relation("IncidentAssignedTo")
+  patrolLogs          PatrolLog[]
+  emergencyBroadcasts EmergencyBroadcast[]
+  sosAlerts           SOSAlert[]
+  assignedWorkOrders  WorkOrder[]          @relation("WorkOrderAssignedTo")
+  inspectionReports   InspectionReport[]
+  refereeProfile      Referee?
+  vendorProfile       Vendor?
+  savedReports        SavedReport[]
+
+  @@index([role])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId])
+}
+
+model ApiKey {
+  id             String        @id @default(uuid())
+  name           String
+  keyHash        String        @unique
+  scopes         String[]
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime      @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// STADIUM / DIGITAL TWIN
+// ---------------------------------------------------------------------------
+
+model Stadium {
+  id             String   @id @default(uuid())
+  name           String
+  address        String?
+  capacity       Int
+  mapImageUrl    String?
+  mapWidth       Int      @default(1000)
+  mapHeight      Int      @default(700)
+  latitude       Float?
+  longitude      Float?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  zones               StadiumZone[]
+  tournaments         Tournament[]
+  parkingLots         ParkingLot[]
+  evacuationPlans     EvacuationPlan[]
+  energyReadings      EnergyReading[]
+  waterUsageReadings  WaterUsageReading[]
+  wasteRecords        WasteRecord[]
+  carbonRecords       CarbonFootprintRecord[]
+  weatherSnapshots    WeatherSnapshot[]
+  seats               Seat[]
+}
+
+model StadiumZone {
+  id          String     @id @default(uuid())
+  stadiumId   String
+  stadium     Stadium    @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  name        String
+  type        ZoneType
+  status      ZoneStatus @default(OPERATIONAL)
+  x           Float
+  y           Float
+  capacity    Int?
+  metadata    Json?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  crowdReadings CrowdDensityReading[]
+  equipment     Equipment[]
+  incidents     Incident[]
+  patrolLogs    PatrolLog[]
+  sosAlerts     SOSAlert[]
+  cctvCameras   CCTVCamera[]
+  fixtures      Fixture[]
+
+  @@index([stadiumId, type])
+}
+
+model CrowdDensityReading {
+  id           String       @id @default(uuid())
+  zoneId       String
+  zone         StadiumZone  @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  count        Int
+  capacityPct  Float
+  densityLevel DensityLevel
+  recordedAt   DateTime     @default(now())
+
+  @@index([zoneId, recordedAt])
+}
+
+model Equipment {
+  id                String          @id @default(uuid())
+  name              String
+  type              String
+  zoneId            String
+  zone              StadiumZone     @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  status            EquipmentStatus @default(HEALTHY)
+  healthScore       Float           @default(100)
+  lastMaintenanceAt DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  asset Asset?
+
+  @@index([zoneId])
+}
+
+// ---------------------------------------------------------------------------
+// TOURNAMENT MANAGEMENT
+// ---------------------------------------------------------------------------
+
+model Tournament {
+  id          String           @id @default(uuid())
+  name        String
+  sport       String
+  status      TournamentStatus @default(UPCOMING)
+  startDate   DateTime
+  endDate     DateTime
+  stadiumId   String?
+  stadium     Stadium?         @relation(fields: [stadiumId], references: [id])
+  organizerId String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  teams    Team[]
+  fixtures Fixture[]
+  standings LeaderboardEntry[]
+
+  @@index([status])
+}
+
+model Team {
+  id           String   @id @default(uuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  name         String
+  shortName    String?
+  logoUrl      String?
+  group        String?
+  createdAt    DateTime @default(now())
+
+  players      Player[]
+  homeFixtures Fixture[] @relation("HomeTeam")
+  awayFixtures Fixture[] @relation("AwayTeam")
+  standing     LeaderboardEntry?
+
+  @@index([tournamentId])
+}
+
+model Player {
+  id            String  @id @default(uuid())
+  teamId        String
+  team          Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  name          String
+  jerseyNumber  Int?
+  position      String?
+  nationality   String?
+  stats         Json?
+  createdAt     DateTime @default(now())
+
+  @@index([teamId])
+}
+
+model Referee {
+  id                  String  @id @default(uuid())
+  userId              String  @unique
+  user                User    @relation(fields: [userId], references: [id])
+  certificationLevel  String?
+  matchesOfficiated   Int     @default(0)
+
+  fixtures Fixture[]
+}
+
+model Fixture {
+  id           String        @id @default(uuid())
+  tournamentId String
+  tournament   Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  round        String
+  homeTeamId   String
+  homeTeam     Team          @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeamId   String
+  awayTeam     Team          @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  refereeId    String?
+  referee      Referee?      @relation(fields: [refereeId], references: [id])
+  zoneId       String?
+  zone         StadiumZone?  @relation(fields: [zoneId], references: [id])
+  scheduledAt  DateTime
+  status       FixtureStatus @default(SCHEDULED)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  match  Match?
+  seatTicketTypes TicketType[]
+
+  @@index([tournamentId, status])
+}
+
+model Match {
+  id         String      @id @default(uuid())
+  fixtureId  String      @unique
+  fixture    Fixture     @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+  homeScore  Int         @default(0)
+  awayScore  Int         @default(0)
+  status     MatchStatus @default(NOT_STARTED)
+  events     Json?
+  startedAt  DateTime?
+  endedAt    DateTime?
+  updatedAt  DateTime    @updatedAt
+
+  tickets Ticket[]
+}
+
+model LeaderboardEntry {
+  id           String     @id @default(uuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teamId       String     @unique
+  team         Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  played       Int        @default(0)
+  won          Int        @default(0)
+  drawn        Int        @default(0)
+  lost         Int        @default(0)
+  goalsFor     Int        @default(0)
+  goalsAgainst Int        @default(0)
+  points       Int        @default(0)
+  updatedAt    DateTime   @updatedAt
+
+  @@index([tournamentId, points])
+}
+
+// ---------------------------------------------------------------------------
+// SMART TICKETING
+// ---------------------------------------------------------------------------
+
+model Seat {
+  id        String   @id @default(uuid())
+  stadiumId String
+  stadium   Stadium  @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  section   String
+  row       String
+  number    Int
+  tier      SeatTier @default(GENERAL)
+  x         Float?
+  y         Float?
+
+  tickets Ticket[]
+
+  @@unique([stadiumId, section, row, number])
+  @@index([stadiumId, tier])
+}
+
+model TicketType {
+  id        String   @id @default(uuid())
+  fixtureId String
+  fixture   Fixture  @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+  name      String
+  tier      SeatTier
+  price     Decimal  @db.Decimal(10, 2)
+  quantity  Int
+  sold      Int      @default(0)
+  createdAt DateTime @default(now())
+
+  tickets Ticket[]
+
+  @@index([fixtureId])
+}
+
+model Booking {
+  id          String        @id @default(uuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  totalAmount Decimal       @db.Decimal(10, 2)
+  status      BookingStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  tickets Ticket[]
+  payment Payment?
+
+  @@index([userId])
+}
+
+model Ticket {
+  id           String       @id @default(uuid())
+  bookingId    String
+  booking      Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  matchId      String
+  match        Match        @relation(fields: [matchId], references: [id])
+  seatId       String
+  seat         Seat         @relation(fields: [seatId], references: [id])
+  ticketTypeId String
+  ticketType   TicketType   @relation(fields: [ticketTypeId], references: [id])
+  qrCode       String       @unique
+  status       TicketStatus @default(VALID)
+  checkedInAt  DateTime?
+  createdAt    DateTime     @default(now())
+
+  refund Refund?
+
+  @@unique([matchId, seatId])
+  @@index([bookingId])
+  @@index([status])
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  bookingId       String        @unique
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amount          Decimal       @db.Decimal(10, 2)
+  method          PaymentMethod
+  status          PaymentStatus @default(PENDING)
+  transactionRef  String        @unique
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  refunds Refund[]
+}
+
+model Refund {
+  id         String       @id @default(uuid())
+  paymentId  String
+  payment    Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  ticketId   String       @unique
+  ticket     Ticket       @relation(fields: [ticketId], references: [id])
+  amount     Decimal      @db.Decimal(10, 2)
+  reason     String?
+  status     RefundStatus @default(REQUESTED)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([paymentId])
+}
+
+// ---------------------------------------------------------------------------
+// SMART PARKING (Phase 2 UI — schema + seed + read endpoints now)
+// ---------------------------------------------------------------------------
+
+model ParkingLot {
+  id        String   @id @default(uuid())
+  stadiumId String
+  stadium   Stadium  @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  name      String
+  totalSlots Int
+  evSlots    Int      @default(0)
+
+  slots ParkingSlot[]
+}
+
+model ParkingSlot {
+  id       String            @id @default(uuid())
+  lotId    String
+  lot      ParkingLot        @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  code     String
+  type     ParkingSlotType   @default(STANDARD)
+  status   ParkingSlotStatus @default(AVAILABLE)
+
+  reservations ParkingReservation[]
+
+  @@unique([lotId, code])
+}
+
+model ParkingReservation {
+  id            String             @id @default(uuid())
+  userId        String
+  user          User               @relation(fields: [userId], references: [id])
+  slotId        String
+  slot          ParkingSlot        @relation(fields: [slotId], references: [id])
+  vehicleNumber String
+  startTime     DateTime
+  endTime       DateTime?
+  status        ReservationStatus  @default(ACTIVE)
+  createdAt     DateTime           @default(now())
+
+  @@index([slotId])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// FAN EXPERIENCE (Phase 2 UI)
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id        String              @id @default(uuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  type      NotificationType    @default(GENERAL)
+  channel   NotificationChannel @default(IN_APP)
+  read      Boolean             @default(false)
+  createdAt DateTime            @default(now())
+
+  @@index([userId, read])
+}
+
+model LostFoundItem {
+  id          String          @id @default(uuid())
+  reporterId  String
+  reporter    User            @relation(fields: [reporterId], references: [id])
+  description String
+  category    String
+  location    String?
+  imageUrl    String?
+  status      LostFoundStatus @default(REPORTED)
+  createdAt   DateTime        @default(now())
+
+  @@index([status])
+}
+
+model FoodOrder {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  vendorId    String
+  vendor      Vendor      @relation(fields: [vendorId], references: [id])
+  items       Json
+  totalAmount Decimal     @db.Decimal(10, 2)
+  status      OrderStatus @default(PLACED)
+  createdAt   DateTime    @default(now())
+
+  @@index([userId])
+  @@index([vendorId])
+}
+
+// ---------------------------------------------------------------------------
+// VENDOR MANAGEMENT (Phase 2 UI)
+// ---------------------------------------------------------------------------
+
+model Vendor {
+  id       String  @id @default(uuid())
+  ownerId  String  @unique
+  owner    User    @relation(fields: [ownerId], references: [id])
+  name     String
+  category String
+  zoneId   String?
+  status   String  @default("ACTIVE")
+
+  inventory InventoryItem[]
+  orders    FoodOrder[]
+}
+
+model InventoryItem {
+  id       String  @id @default(uuid())
+  vendorId String
+  vendor   Vendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  name     String
+  sku      String
+  stock    Int
+  price    Decimal @db.Decimal(10, 2)
+
+  @@index([vendorId])
+}
+
+// ---------------------------------------------------------------------------
+// SECURITY CENTER (Phase 2 UI)
+// ---------------------------------------------------------------------------
+
+model Incident {
+  id           String           @id @default(uuid())
+  reportedById String
+  reportedBy   User             @relation("IncidentReportedBy", fields: [reportedById], references: [id])
+  assignedToId String?
+  assignedTo   User?            @relation("IncidentAssignedTo", fields: [assignedToId], references: [id])
+  zoneId       String?
+  zone         StadiumZone?     @relation(fields: [zoneId], references: [id])
+  type         String
+  severity     IncidentSeverity @default(LOW)
+  description  String
+  status       IncidentStatus   @default(OPEN)
+  createdAt    DateTime         @default(now())
+  resolvedAt   DateTime?
+
+  @@index([status, severity])
+}
+
+model CCTVCamera {
+  id        String   @id @default(uuid())
+  zoneId    String
+  zone      StadiumZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  label     String
+  streamUrl String?
+  status    String   @default("ONLINE")
+
+  @@index([zoneId])
+}
+
+model PatrolLog {
+  id            String      @id @default(uuid())
+  officerId     String
+  officer       User        @relation(fields: [officerId], references: [id])
+  zoneId        String
+  zone          StadiumZone @relation(fields: [zoneId], references: [id])
+  notes         String?
+  checkpointAt  DateTime    @default(now())
+
+  @@index([officerId])
+  @@index([zoneId])
+}
+
+model EmergencyBroadcast {
+  id            String   @id @default(uuid())
+  senderId      String
+  sender        User     @relation(fields: [senderId], references: [id])
+  message       String
+  severity      IncidentSeverity @default(MEDIUM)
+  audienceRoles Role[]
+  createdAt     DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// EMERGENCY RESPONSE (Phase 2 UI)
+// ---------------------------------------------------------------------------
+
+model SOSAlert {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  zoneId     String?
+  zone       StadiumZone? @relation(fields: [zoneId], references: [id])
+  type       SOSType
+  status     SOSStatus @default(OPEN)
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  ambulanceDispatch AmbulanceDispatch?
+
+  @@index([status])
+}
+
+model AmbulanceDispatch {
+  id           String    @id @default(uuid())
+  sosAlertId   String    @unique
+  sosAlert     SOSAlert  @relation(fields: [sosAlertId], references: [id], onDelete: Cascade)
+  dispatchedAt DateTime  @default(now())
+  arrivedAt    DateTime?
+  driverName   String?
+}
+
+model EvacuationPlan {
+  id        String   @id @default(uuid())
+  stadiumId String
+  stadium   Stadium  @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  name      String
+  routeData Json
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+
+  @@index([stadiumId])
+}
+
+// ---------------------------------------------------------------------------
+// ASSET & MAINTENANCE / PREDICTIVE MAINTENANCE (Phase 2 UI)
+// ---------------------------------------------------------------------------
+
+model Asset {
+  id                String      @id @default(uuid())
+  name              String
+  category          String
+  equipmentId       String?     @unique
+  equipment         Equipment?  @relation(fields: [equipmentId], references: [id])
+  purchaseDate      DateTime?
+  status            AssetStatus @default(ACTIVE)
+  healthScore       Float       @default(100)
+  createdAt         DateTime    @default(now())
+
+  workOrders          WorkOrder[]
+  inspectionReports   InspectionReport[]
+  maintenancePredictions MaintenancePrediction[]
+}
+
+model WorkOrder {
+  id           String            @id @default(uuid())
+  assetId      String
+  asset        Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  priority     WorkOrderPriority @default(MEDIUM)
+  status       WorkOrderStatus   @default(OPEN)
+  assignedToId String?
+  assignedTo   User?             @relation("WorkOrderAssignedTo", fields: [assignedToId], references: [id])
+  scheduledAt  DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime          @default(now())
+
+  @@index([assetId])
+  @@index([status])
+}
+
+model InspectionReport {
+  id          String   @id @default(uuid())
+  assetId     String
+  asset       Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  inspectorId String
+  inspector   User     @relation(fields: [inspectorId], references: [id])
+  findings    String
+  score       Float
+  createdAt   DateTime @default(now())
+
+  @@index([assetId])
+}
+
+model MaintenancePrediction {
+  id                     String   @id @default(uuid())
+  assetId                String
+  asset                  Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  riskScore              Float
+  remainingUsefulLifeDays Int
+  recommendation         String
+  predictedAt            DateTime @default(now())
+
+  @@index([assetId])
+}
+
+// ---------------------------------------------------------------------------
+// SUSTAINABILITY DASHBOARD (Phase 2 UI)
+// ---------------------------------------------------------------------------
+
+model EnergyReading {
+  id              String   @id @default(uuid())
+  stadiumId       String
+  stadium         Stadium  @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  consumptionKwh  Float
+  solarGenKwh     Float    @default(0)
+  recordedAt      DateTime @default(now())
+
+  @@index([stadiumId, recordedAt])
+}
+
+model WaterUsageReading {
+  id            String   @id @default(uuid())
+  stadiumId     String
+  stadium       Stadium  @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  usageLiters   Float
+  recordedAt    DateTime @default(now())
+
+  @@index([stadiumId, recordedAt])
+}
+
+model WasteRecord {
+  id         String   @id @default(uuid())
+  stadiumId  String
+  stadium    Stadium  @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  category   String
+  weightKg   Float
+  recycled   Boolean  @default(false)
+  recordedAt DateTime @default(now())
+
+  @@index([stadiumId, recordedAt])
+}
+
+model CarbonFootprintRecord {
+  id         String   @id @default(uuid())
+  stadiumId  String
+  stadium    Stadium  @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  co2eKg     Float
+  recordedAt DateTime @default(now())
+
+  @@index([stadiumId, recordedAt])
+}
+
+model WeatherSnapshot {
+  id           String           @id @default(uuid())
+  stadiumId    String
+  stadium      Stadium          @relation(fields: [stadiumId], references: [id], onDelete: Cascade)
+  temperatureC Float
+  condition    WeatherCondition
+  windSpeedKmh Float
+  humidityPct  Float
+  recordedAt   DateTime         @default(now())
+
+  @@index([stadiumId, recordedAt])
+}
+
+// ---------------------------------------------------------------------------
+// REPORTS & NOTIFICATIONS (Phase 2 UI)
+// ---------------------------------------------------------------------------
+
+model SavedReport {
+  id          String   @id @default(uuid())
+  type        String
+  generatedById String
+  generatedBy User     @relation(fields: [generatedById], references: [id])
+  format      String
+  fileUrl     String?
+  params      Json?
+  createdAt   DateTime @default(now())
+
+  @@index([generatedById])
+}
+
+model NotificationLog {
+  id        String   @id @default(uuid())
+  channel   NotificationChannel
+  recipient String
+  subject   String?
+  body      String
+  status    String
+  sentAt    DateTime @default(now())
+
+  @@index([channel, status])
+}

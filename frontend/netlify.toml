@@ -1,0 +1,26 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# VITE_API_URL and VITE_SOCKET_URL must be set in Netlify's Site configuration
+# > Environment variables, pointing at your deployed Render backend, e.g.:
+#   VITE_API_URL=https://stadium-os-backend.onrender.com/api
+#   VITE_SOCKET_URL=https://stadium-os-backend.onrender.com
+# The frontend connects to the backend directly (not proxied through Netlify)
+# since Netlify's redirect proxy does not reliably support WebSocket upgrades
+# for Socket.IO across origins.
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
