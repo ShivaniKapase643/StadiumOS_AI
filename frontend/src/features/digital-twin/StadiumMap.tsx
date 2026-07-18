@@ -74,6 +74,28 @@ export function StadiumMap({
     []
   );
 
+  const criticalPulseIcon = useMemo(
+    () =>
+      L.divIcon({
+        className: '',
+        html: `<span class="pointer-events-none absolute inline-flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 rounded-full bg-destructive/40 animate-pulse-ring"></span>`,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0],
+      }),
+    []
+  );
+
+  const criticalZones = useMemo(
+    () =>
+      zones.filter((z) => {
+        if (!visibleTypes.has(z.type)) return false;
+        const live = crowdOverrides[z.id];
+        const density = live?.densityLevel ?? z.crowdReadings?.[0]?.densityLevel;
+        return density === 'CRITICAL';
+      }),
+    [zones, crowdOverrides, visibleTypes]
+  );
+
   return (
     <MapContainer
       crs={CRS.Simple}
@@ -90,6 +112,11 @@ export function StadiumMap({
 
       <Polygon positions={bowlPoints} pathOptions={{ color: '#94a3b8', weight: 2, fillColor: '#cbd5e1', fillOpacity: 0.25 }} />
       <Polygon positions={pitchPoints} pathOptions={{ color: '#16a34a', weight: 2, fillColor: '#22c55e', fillOpacity: 0.35 }} />
+
+      {criticalZones.map((zone) => {
+        const [lat, lng] = toLatLng(zone.x, zone.y, mapHeight);
+        return <Marker key={`critical-${zone.id}`} position={[lat, lng]} icon={criticalPulseIcon} interactive={false} />;
+      })}
 
       {zones
         .filter((z) => visibleTypes.has(z.type))

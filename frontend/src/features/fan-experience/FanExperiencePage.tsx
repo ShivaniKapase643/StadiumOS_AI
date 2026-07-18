@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 import { Bot, Loader2, MapPin, Search, ShoppingBag, Send } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -55,6 +56,20 @@ function ChatbotTab() {
               </div>
             </div>
           ))}
+          {chatMutation.isPending && (
+            <div className="flex justify-start">
+              <div className="flex items-center gap-1 rounded-lg bg-muted px-3 py-2.5">
+                {[0, 1, 2].map((i) => (
+                  <motion.span
+                    key={i}
+                    className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60"
+                    animate={{ y: [0, -4, 0] }}
+                    transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <Input

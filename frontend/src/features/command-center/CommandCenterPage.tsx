@@ -1,8 +1,10 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Activity, ParkingSquare, ShieldAlert, Siren, Radio, Trophy } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Activity, ParkingSquare, ShieldAlert, Siren, Radio, Trophy, Volume2, VolumeX } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/shared/StatCard';
 import { formatDateTime } from '@/lib/utils';
@@ -12,6 +14,28 @@ import { StadiumMap } from '@/features/digital-twin/StadiumMap';
 import { AIInsightsPanel } from '@/features/ai/AIInsightsPanel';
 import { useSocketEvent } from '@/hooks/useSocket';
 import * as tournamentService from '@/services/tournament.service';
+
+function playAlertChime() {
+  try {
+    const AudioCtx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.15, ctx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.32);
+    osc.onended = () => ctx.close();
+  } catch {
+    // Web Audio unavailable or blocked by the browser — fail silently.
+  }
+}
 
 export default function CommandCenterPage() {
   const queryClient = useQueryClient();
@@ -38,6 +62,35 @@ export default function CommandCenterPage() {
 
   const activeAlertZoneIds = useMemo(() => new Set(alerts.map((a) => a.zoneId).filter(Boolean)), [alerts]);
   const allZoneTypes = useMemo(() => new Set(snapshot?.zones.map((z) => z.type) ?? []), [snapshot]);
+
+  const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem('cc-alert-sound') === '1');
+  const [flashAlertId, setFlashAlertId] = useState<string | null>(null);
+  const seenNewestId = useRef<string | null>(null);
+  const isFirstAlertsRun = useRef(true);
+
+  useEffect(() => {
+    const newest = alerts[0];
+    if (!newest) return;
+    if (isFirstAlertsRun.current) {
+      isFirstAlertsRun.current = false;
+      seenNewestId.current = newest.id;
+      return;
+    }
+    if (newest.id === seenNewestId.current) return;
+    seenNewestId.current = newest.id;
+    setFlashAlertId(newest.id);
+    if (soundEnabled) playAlertChime();
+    const timer = setTimeout(() => setFlashAlertId(null), 5000);
+    return () => clearTimeout(timer);
+  }, [alerts, soundEnabled]);
+
+  const toggleSound = () => {
+    setSoundEnabled((prev) => {
+      const next = !prev;
+      localStorage.setItem('cc-alert-sound', next ? '1' : '0');
+      return next;
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -95,21 +148,45 @@ export default function CommandCenterPage() {
 
         <div className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex-row items-center justify-between space-y-0">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Radio className="h-4 w-4 text-destructive" /> Live Alert Feed
               </CardTitle>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                onClick={toggleSound}
+                title={soundEnabled ? 'Mute alert sound' : 'Play a chime on new alerts'}
+              >
+                {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+              </Button>
             </CardHeader>
             <CardContent className="space-y-2">
               {alerts.length === 0 && <p className="text-xs text-muted-foreground">No active alerts</p>}
-              {alerts.map((alert) => (
-                <div key={alert.id} className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs">
-                  <p className="font-medium text-destructive">{alert.type}</p>
-                  <p className="text-muted-foreground">
-                    {alert.zoneName ?? 'Stadium-wide'} &middot; {formatDateTime(alert.createdAt)}
-                  </p>
-                </div>
-              ))}
+              <AnimatePresence initial={false}>
+                {alerts.map((alert) => (
+                  <motion.div
+                    key={alert.id}
+                    layout
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                    className="relative rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs"
+                  >
+                    {flashAlertId === alert.id && (
+                      <Badge variant="destructive" className="absolute -right-1.5 -top-1.5 animate-pulse px-1.5 py-0 text-[9px]">
+                        NEW
+                      </Badge>
+                    )}
+                    <p className="font-medium text-destructive">{alert.type}</p>
+                    <p className="text-muted-foreground">
+                      {alert.zoneName ?? 'Stadium-wide'} &middot; {formatDateTime(alert.createdAt)}
+                    </p>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </CardContent>
           </Card>
 
