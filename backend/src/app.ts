@@ -30,6 +30,14 @@ import settingsRoutes from './modules/settings/settings.routes';
 export function createApp(): Application {
   const app = express();
 
+  // Render (and most PaaS hosts) sit behind a reverse proxy, so without this
+  // Express can't see real client IPs — req.ip resolves to the proxy's
+  // address for every visitor, which silently made express-rate-limit bucket
+  // all users together under one shared quota.
+  if (env.isProd) {
+    app.set('trust proxy', 1);
+  }
+
   app.use(helmet());
   app.use(cors({ origin: env.clientUrl, credentials: true }));
   app.use(express.json({ limit: '2mb' }));
