@@ -42,7 +42,7 @@ export default function TournamentsPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {tournaments.map((t) => (
             <Link key={t.id} to={`/tournaments/${t.id}`}>
-              <Card className="h-full transition-shadow hover:shadow-md">
+              <Card className="h-full transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.99]">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <CardTitle className="flex items-center gap-2 text-base">

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { useCountUp } from '@/hooks/useCountUp';
 import type { LucideIcon } from 'lucide-react';
 
 interface StatCardProps {
@@ -20,13 +21,20 @@ const accentClasses: Record<NonNullable<StatCardProps['accent']>, string> = {
 };
 
 export function StatCard({ label, value, icon: Icon, trend, trendDirection = 'neutral', accent = 'primary' }: StatCardProps) {
+  const animatedValue = useCountUp(value);
+
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-      <Card>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.25 }}
+    >
+      <Card className="transition-shadow duration-200 hover:shadow-md">
         <CardContent className="flex items-start justify-between p-5">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-            <p className="text-2xl font-semibold tabular-nums">{value}</p>
+            <p className="text-2xl font-semibold tabular-nums">{animatedValue}</p>
             {trend && (
               <p
                 className={cn(

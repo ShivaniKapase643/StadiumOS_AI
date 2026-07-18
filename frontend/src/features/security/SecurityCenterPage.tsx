@@ -160,7 +160,11 @@ function CctvTab() {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       {cameras.map((cam) => (
-        <Card key={cam.id} className="cursor-pointer transition-shadow hover:shadow-md" onClick={() => setActiveCamera(cam)}>
+        <Card
+          key={cam.id}
+          className="cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.99]"
+          onClick={() => setActiveCamera(cam)}
+        >
           <CardContent className="flex items-center justify-between p-4">
             <div className="flex items-center gap-2">
               <Camera className="h-4 w-4 text-primary" />
