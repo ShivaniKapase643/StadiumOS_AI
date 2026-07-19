@@ -263,14 +263,25 @@ than being silently omitted — see each `vitest.config.ts`):
 
 | | Statements | Notes |
 |---|---|---|
-| Backend, unit suite only | ~65% | 334 tests across 47 files. Closed 39 of 42 files that had zero unit coverage — `app.ts`, all 16 route modules, every controller, and the shared middleware stack (auth/rbac/validate/errorHandler) — by mocking the service layer and driving requests through the real app via Supertest. Only 3 files remain untested: a background `setInterval` job (`liveDataSimulator.ts`) and two thin external-SDK wrappers (Cloudinary, Multer upload config). |
-| Frontend | ~6% | 6 feature-level pages/hooks/components have real tests; the remaining ~15 feature pages, most services, and all dialogs are untested — the next highest-leverage gap. |
+| Backend, unit suite only | ~65% | 334 tests across 47 files. Closed 39 of 42 files that had zero unit coverage — `app.ts`, all 16 route modules, every controller, and the shared middleware stack (auth/rbac/validate/errorHandler) — by mocking the service layer and driving requests through the real app via Supertest. |
+| Frontend | ~16% | 103 tests across 18 files: component tests (`SeatMap`, `TournamentsPage`, `ReportsPage`, `LoginPage` — loading/empty/error states, RBAC gating, form validation), every domain service that talks to the API (auth, dashboard, twin, emergency, parking — endpoint/params/response-shape assertions), the Axios client's token storage + error-message extraction, and pure `lib/` utilities (CSV/PDF export, chart color mapping, zone metadata). |
 
 These are not 95%+, and this README won't claim otherwise. The integration suite (auth, ticketing,
 tournaments, twin, security, emergency, parking — ~65 assertions across 8 files) covers real
 business logic against a genuine Postgres container in CI, on top of the unit-level numbers above.
-The clearest remaining gap is the frontend: most feature pages, services, and dialogs still have no
-component-level tests.
+The clearest remaining gap is still the frontend: most feature pages (Command Center, Digital Twin,
+Security Center, Fan Experience, Settings, …) and all dialogs still have no component-level tests.
+
+**Deliberately untested** — three backend files primarily wrap external SDKs or run as a
+long-lived background process, rather than containing request-handling business logic:
+
+- `liveDataSimulator.ts` — a background `setInterval` job
+- `cloudinary.ts` — a thin Cloudinary SDK wrapper
+- `upload.ts` — Multer upload configuration
+
+These components contain minimal business logic, making exhaustive unit testing lower value than
+testing the application behavior that depends on them (which the ticketing/booking integration
+tests already exercise indirectly).
 
 ## Deployment
 
