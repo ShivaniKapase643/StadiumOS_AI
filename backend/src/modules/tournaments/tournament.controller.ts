@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as tournamentService from './tournament.service';
+import { predictFixture } from './predictor.service';
 import { created, ok, paginated } from '../../utils/apiResponse';
 import { parsePagination } from '../../utils/pagination';
 import { logAudit } from '../users/audit.service';
@@ -14,6 +15,10 @@ export async function createTournamentHandler(req: Request, res: Response) {
   const tournament = await tournamentService.createTournament(req.body);
   await logAudit(req.user?.sub, 'CREATE_TOURNAMENT', 'Tournament', tournament.id);
   created(res, tournament);
+}
+
+export async function predictFixtureHandler(req: Request, res: Response) {
+  ok(res, await predictFixture(req.params.fixtureId));
 }
 
 export async function getTournamentHandler(req: Request, res: Response) {

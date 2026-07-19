@@ -3,6 +3,7 @@ import { asyncHandler } from '../../utils/asyncHandler';
 import { requireAuth } from '../../middleware/auth';
 import {
   kpisHandler,
+  healthScoreHandler,
   attendanceTrendHandler,
   revenueTrendHandler,
   crowdByZoneHandler,
@@ -23,6 +24,15 @@ router.use(requireAuth);
  *     security: [{ bearerAuth: [] }]
  */
 router.get('/kpis', asyncHandler(kpisHandler));
+
+/**
+ * @openapi
+ * /dashboard/health-score:
+ *   get:
+ *     summary: Stadium Command Mission Control — a single aggregate health score plus per-category breakdown
+ *     tags: [Dashboard]
+ */
+router.get('/health-score', asyncHandler(healthScoreHandler));
 
 /**
  * @openapi

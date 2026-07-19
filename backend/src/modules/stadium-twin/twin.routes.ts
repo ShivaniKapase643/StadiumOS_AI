@@ -12,6 +12,8 @@ import {
   updateZoneStatusHandler,
   deleteZoneHandler,
   liveSnapshotHandler,
+  replayTimeRangeHandler,
+  replaySnapshotHandler,
 } from './twin.controller';
 
 const router = Router();
@@ -46,6 +48,24 @@ router.get('/stadiums/:stadiumId/zones', asyncHandler(listZonesHandler));
  *     tags: [Digital Twin]
  */
 router.get('/stadiums/:stadiumId/live', asyncHandler(liveSnapshotHandler));
+
+/**
+ * @openapi
+ * /twin/stadiums/{stadiumId}/replay-range:
+ *   get:
+ *     summary: "Live Stadium Replay — the earliest/latest recorded timestamps available to scrub between"
+ *     tags: [Digital Twin]
+ */
+router.get('/stadiums/:stadiumId/replay-range', asyncHandler(replayTimeRangeHandler));
+
+/**
+ * @openapi
+ * /twin/stadiums/{stadiumId}/replay:
+ *   get:
+ *     summary: "Live Stadium Replay — reconstructed zone/event state at a past point in time (?at=ISO timestamp)"
+ *     tags: [Digital Twin]
+ */
+router.get('/stadiums/:stadiumId/replay', asyncHandler(replaySnapshotHandler));
 
 /**
  * @openapi

@@ -32,3 +32,12 @@ export async function deleteZoneHandler(req: Request, res: Response) {
 export async function liveSnapshotHandler(req: Request, res: Response) {
   ok(res, await twinService.getLiveSnapshot(req.params.stadiumId));
 }
+
+export async function replayTimeRangeHandler(req: Request, res: Response) {
+  ok(res, await twinService.getReplayTimeRange(req.params.stadiumId));
+}
+
+export async function replaySnapshotHandler(req: Request, res: Response) {
+  const at = req.query.at ? new Date(req.query.at as string) : new Date();
+  ok(res, await twinService.getReplaySnapshot(req.params.stadiumId, at));
+}

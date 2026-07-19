@@ -9,6 +9,7 @@ import { Role } from '@prisma/client';
 import { ApiError, created, ok, paginated } from '../../utils/apiResponse';
 import { parsePagination } from '../../utils/pagination';
 import * as fanService from './fan-experience.service';
+import { getConciergeInfo } from './concierge.service';
 
 const router = Router();
 router.use(requireAuth);
@@ -131,6 +132,21 @@ router.get(
     const row = req.query.row as string | undefined;
     const number = req.query.number ? Number(req.query.number) : undefined;
     ok(res, await fanService.findSeats({ tier, section, row, number }));
+  })
+);
+
+/**
+ * @openapi
+ * /fan-experience/concierge:
+ *   get:
+ *     summary: "VIP AI Concierge — a personalized summary from the fan's own ticket, parking reservation, and live stadium data"
+ *     tags: [Fan Experience]
+ */
+router.get(
+  '/concierge',
+  asyncHandler(async (req, res) => {
+    if (!req.user) throw ApiError.unauthorized();
+    ok(res, await getConciergeInfo(req.user.sub));
   })
 );
 

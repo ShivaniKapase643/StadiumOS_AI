@@ -23,6 +23,7 @@ import {
   generateScheduleHandler,
   updateMatchScoreHandler,
   leaderboardHandler,
+  predictFixtureHandler,
 } from './tournament.controller';
 
 const router = Router();
@@ -121,6 +122,15 @@ router.patch(
  *     tags: [Tournaments]
  */
 router.get('/:tournamentId/leaderboard', asyncHandler(leaderboardHandler));
+
+/**
+ * @openapi
+ * /tournaments/fixtures/{fixtureId}/predict:
+ *   get:
+ *     summary: "AI Tournament Predictor — win probability and expected score from real leaderboard standings"
+ *     tags: [Tournaments]
+ */
+router.get('/fixtures/:fixtureId/predict', asyncHandler(predictFixtureHandler));
 
 /**
  * @openapi

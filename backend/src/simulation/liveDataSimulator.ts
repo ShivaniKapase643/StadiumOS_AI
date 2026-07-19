@@ -1,20 +1,14 @@
-import { DensityLevel, EquipmentStatus, ParkingSlotStatus } from '@prisma/client';
+import { EquipmentStatus, ParkingSlotStatus } from '@prisma/client';
 import { prisma } from '../config/db';
 import { emitToAll } from '../sockets';
 import { SOCKET_EVENTS } from '../sockets/events';
 import { logger } from '../config/logger';
 import { env } from '../config/env';
+import { densityLevelFor } from '../utils/density';
 import { demoTickMatchSimulation } from '../modules/tournaments/tournament.service';
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
-}
-
-function densityLevelFor(pct: number): DensityLevel {
-  if (pct >= 90) return DensityLevel.CRITICAL;
-  if (pct >= 70) return DensityLevel.HIGH;
-  if (pct >= 40) return DensityLevel.MODERATE;
-  return DensityLevel.LOW;
 }
 
 function randomWalk(current: number, volatility: number, min: number, max: number): number {

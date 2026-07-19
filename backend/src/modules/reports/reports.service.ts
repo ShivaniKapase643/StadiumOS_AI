@@ -1,6 +1,8 @@
 import { prisma } from '../../config/db';
 import { getParkingAnalytics } from '../parking/parking.service';
 import { listLatestPredictions } from '../maintenance/maintenance.service';
+import { generateInsights } from '../ai/insights.service';
+import { getStadiumHealthScore } from '../dashboard/healthScore.service';
 
 export type ReportType = 'attendance' | 'revenue' | 'crowd' | 'security' | 'vendor' | 'parking' | 'maintenance';
 
@@ -111,4 +113,32 @@ export async function getReport(type: ReportType) {
     case 'maintenance':
       return maintenanceReport();
   }
+}
+
+/**
+ * AI Report Generator — combines every existing per-type report plus the
+ * rule-based insights engine and the aggregate health score into one
+ * payload. Each section reuses the exact same query functions the
+ * individual Reports tabs already call, so this can't drift out of sync
+ * with them; it's a single consolidated view, not a separate data path.
+ */
+export async function getFullEventReport() {
+  const [attendance, revenue, crowd, security, vendor, parking, maintenance, insights, health] = await Promise.all([
+    attendanceReport(),
+    revenueReport(),
+    crowdReport(),
+    securityReport(),
+    vendorReport(),
+    getParkingAnalytics(),
+    maintenanceReport(),
+    generateInsights(),
+    getStadiumHealthScore(),
+  ]);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    health,
+    sections: { attendance, revenue, crowd, security, vendor, parking, maintenance },
+    aiInsights: insights,
+  };
 }

@@ -1,9 +1,14 @@
 import { Request, Response } from 'express';
 import * as dashboardService from './dashboard.service';
+import { getStadiumHealthScore } from './healthScore.service';
 import { ok } from '../../utils/apiResponse';
 
 export async function kpisHandler(_req: Request, res: Response) {
   ok(res, await dashboardService.getKpis());
+}
+
+export async function healthScoreHandler(_req: Request, res: Response) {
+  ok(res, await getStadiumHealthScore());
 }
 
 export async function attendanceTrendHandler(_req: Request, res: Response) {

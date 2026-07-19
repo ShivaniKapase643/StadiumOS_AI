@@ -7,6 +7,7 @@ import { requireRole, ADMIN_ROLES } from '../../middleware/rbac';
 import { validate } from '../../middleware/validate';
 import { ApiError, created, ok } from '../../utils/apiResponse';
 import * as emergencyService from './emergency.service';
+import { generateIncidentActionPlan, simulateEvacuation } from './aiResponse.service';
 import { logAudit } from '../users/audit.service';
 
 const router = Router();
@@ -82,6 +83,32 @@ router.get(
   '/evacuation-plans',
   requireRole(...RESPONDER_ROLES),
   asyncHandler(async (_req, res) => ok(res, await emergencyService.listEvacuationPlans()))
+);
+
+/**
+ * @openapi
+ * /emergency/sos/{id}/action-plan:
+ *   get:
+ *     summary: "AI Incident Commander — generate a rule-based response action plan for an SOS alert"
+ *     tags: [Emergency]
+ */
+router.get(
+  '/sos/:id/action-plan',
+  requireRole(...RESPONDER_ROLES),
+  asyncHandler(async (req, res) => ok(res, await generateIncidentActionPlan(req.params.id)))
+);
+
+/**
+ * @openapi
+ * /emergency/evacuation-simulate/{zoneId}:
+ *   get:
+ *     summary: "Smart Evacuation Simulator — fastest and congestion-aware alternative exit routes from a zone"
+ *     tags: [Emergency]
+ */
+router.get(
+  '/evacuation-simulate/:zoneId',
+  requireRole(...RESPONDER_ROLES),
+  asyncHandler(async (req, res) => ok(res, await simulateEvacuation(req.params.zoneId)))
 );
 
 export default router;
