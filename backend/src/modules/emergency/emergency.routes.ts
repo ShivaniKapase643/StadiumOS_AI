@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { requireAuth } from '../../middleware/auth';
-import { requireRole } from '../../middleware/rbac';
+import { requireRole, ADMIN_ROLES } from '../../middleware/rbac';
 import { validate } from '../../middleware/validate';
 import { ApiError, created, ok } from '../../utils/apiResponse';
 import * as emergencyService from './emergency.service';
@@ -12,7 +12,7 @@ import { logAudit } from '../users/audit.service';
 const router = Router();
 router.use(requireAuth);
 
-const RESPONDER_ROLES = [Role.SUPER_ADMIN, Role.STADIUM_ADMIN, Role.SECURITY_OFFICER, Role.MEDICAL_TEAM];
+const RESPONDER_ROLES = [...ADMIN_ROLES, Role.SECURITY_OFFICER, Role.MEDICAL_TEAM];
 
 const createSosSchema = z.object({ body: z.object({ type: z.enum(['MEDICAL', 'FIRE', 'SECURITY', 'OTHER']), zoneId: z.string().uuid().optional() }) });
 const dispatchSchema = z.object({ body: z.object({ driverName: z.string().max(80).optional() }) });

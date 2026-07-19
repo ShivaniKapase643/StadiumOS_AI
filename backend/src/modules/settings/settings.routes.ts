@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { requireAuth } from '../../middleware/auth';
-import { requireRole } from '../../middleware/rbac';
+import { requireRole, ADMIN_ROLES } from '../../middleware/rbac';
 import { validate } from '../../middleware/validate';
 import { ApiError, created, ok, paginated } from '../../utils/apiResponse';
 import { parsePagination } from '../../utils/pagination';
@@ -13,8 +13,6 @@ import { logAudit } from '../users/audit.service';
 
 const router = Router();
 router.use(requireAuth);
-
-const ADMIN_ROLES = [Role.SUPER_ADMIN, Role.STADIUM_ADMIN];
 
 const updateOrgSchema = z.object({ body: z.object({ name: z.string().min(2).max(150).optional(), logoUrl: z.string().url().optional() }) });
 const updateRoleSchema = z.object({ body: z.object({ role: z.nativeEnum(Role) }) });

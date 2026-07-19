@@ -75,6 +75,16 @@ export async function listReferees() {
 // auto-allocation.
 // ---------------------------------------------------------------------------
 
+/**
+ * Circle method round-robin: fixes team[0], rotates everyone else one
+ * position per round, and pairs the two ends of the remaining line inward.
+ * For n teams this always produces exactly n-1 rounds where every team
+ * plays every other team exactly once. An odd team count gets a `__BYE__`
+ * placeholder seat so the rotation math stays even; any pairing touching
+ * `__BYE__` is dropped, which is what gives that round's bye team a week off.
+ * Home/away flips every other round (`round % 2`) so no team is
+ * systematically stuck at home or away across the schedule.
+ */
 export function generateRoundRobinPairs(teamIds: string[]): Array<Array<[string, string]>> {
   const teams = [...teamIds];
   if (teams.length % 2 !== 0) teams.push('__BYE__');

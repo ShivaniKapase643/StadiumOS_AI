@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { requireAuth } from '../../middleware/auth';
-import { requireRole } from '../../middleware/rbac';
+import { requireRole, ADMIN_ROLES } from '../../middleware/rbac';
 import { validate } from '../../middleware/validate';
 import { Role } from '@prisma/client';
 import {
@@ -24,7 +24,6 @@ import {
 const router = Router();
 router.use(requireAuth);
 
-const ADMIN_ROLES = [Role.SUPER_ADMIN, Role.STADIUM_ADMIN];
 const SCANNER_ROLES = [...ADMIN_ROLES, Role.SECURITY_OFFICER, Role.VOLUNTEER];
 
 /**

@@ -77,8 +77,14 @@ export default function RegisterPage() {
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" {...register('password')} />
-            {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+            <Input id="password" type="password" aria-describedby="password-requirements" {...register('password')} />
+            {errors.password ? (
+              <p className="text-xs text-destructive">{errors.password.message}</p>
+            ) : (
+              <p id="password-requirements" className="text-xs text-muted-foreground">
+                8+ characters, with an uppercase letter, lowercase letter, number, and symbol.
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm</Label>

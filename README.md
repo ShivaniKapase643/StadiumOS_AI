@@ -146,6 +146,41 @@ The seed script creates one account per role, all with password `Password123!`:
 | Referee | referee@stadiumos.dev |
 | Fan | fan@stadiumos.dev |
 
+## Security
+
+- **Auth**: short-lived JWT access tokens + longer-lived refresh tokens, bcrypt (cost 12) password
+  hashing. Every issued refresh token carries a random `jti`, so two logins for the same user in
+  the same second can't collide on the DB's unique constraint. Refreshing rotates the token (the
+  old one is revoked); **presenting an already-revoked refresh token is treated as a theft
+  signal and revokes every session for that account**, not just the one in use.
+- **Password policy**: 8-72 characters (bcrypt's own limit), must contain an uppercase letter,
+  lowercase letter, number, and symbol — enforced identically on the client (inline, before
+  submit) and server (`auth.validation.ts`, the authoritative check).
+- **RBAC**: enforced at the API layer (`requireRole` middleware on every privileged route, backed
+  by shared role-group constants in `middleware/rbac.ts`) and mirrored in the UI (`permissions.ts`
+  filters nav/actions by role) — the UI layer is a UX convenience, not the security boundary.
+- **Input validation**: every mutating route validates `req.body`/`req.query` against a Zod schema
+  before the handler runs (`middleware/validate.ts`); malformed input never reaches a service or
+  Prisma call.
+- **SQL injection**: not reachable by construction — every database call goes through Prisma's
+  parameterized query builder; there is no raw SQL (`$queryRaw`/`$executeRaw`) anywhere in the
+  application code, only in Prisma's own generated migrations.
+- **XSS**: React escapes all rendered content by default; the codebase contains zero uses of
+  `dangerouslySetInnerHTML`.
+- **CSRF / cookies**: intentionally not applicable, not overlooked. Auth is a JWT bearer token in
+  the `Authorization` header, not an ambient cookie the browser attaches automatically — CSRF
+  specifically exploits the latter, so there's no cookie-based session for it to target, and no
+  session cookie whose `Secure`/`HttpOnly`/`SameSite` flags would need setting.
+- **Tickets**: QR codes are HMAC-SHA256-signed and verified with a constant-time comparison
+  (`crypto.timingSafeEqual`, not `===`) so a tampered ticket fails verification without leaking
+  timing information about how close a forged signature came to matching.
+- **Transport/headers**: Helmet's default header set on the API, CORS scoped to the configured
+  frontend origin, a CSP on the Netlify-served frontend, and `express-rate-limit` (correctly
+  scoped per-IP via `trust proxy` behind Render's reverse proxy — see the note in `app.ts`).
+- **Secrets**: `requiredSecret()` in `config/env.ts` allows a dev-only fallback for JWT/QR
+  signing secrets, but throws on startup if they're missing in production — no silent
+  well-known-default signing key in a real deployment.
+
 ## Scripts (root)
 
 - `npm run dev` — run backend + frontend together

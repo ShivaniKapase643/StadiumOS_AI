@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { requireAuth } from '../../middleware/auth';
-import { requireRole } from '../../middleware/rbac';
+import { requireRole, ADMIN_ROLES } from '../../middleware/rbac';
 import { validate } from '../../middleware/validate';
 import { ApiError, created, ok } from '../../utils/apiResponse';
 import * as maintenanceService from './maintenance.service';
@@ -11,7 +11,7 @@ import * as maintenanceService from './maintenance.service';
 const router = Router();
 router.use(requireAuth);
 
-const MAINTENANCE_ROLES = [Role.SUPER_ADMIN, Role.STADIUM_ADMIN, Role.MAINTENANCE_TEAM];
+const MAINTENANCE_ROLES = [...ADMIN_ROLES, Role.MAINTENANCE_TEAM];
 
 const createWorkOrderSchema = z.object({
   body: z.object({

@@ -46,8 +46,14 @@ export default function ResetPasswordPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="newPassword">New password</Label>
-          <Input id="newPassword" type="password" {...register('newPassword')} />
-          {errors.newPassword && <p className="text-xs text-destructive">{errors.newPassword.message}</p>}
+          <Input id="newPassword" type="password" aria-describedby="new-password-requirements" {...register('newPassword')} />
+          {errors.newPassword ? (
+            <p className="text-xs text-destructive">{errors.newPassword.message}</p>
+          ) : (
+            <p id="new-password-requirements" className="text-xs text-muted-foreground">
+              8+ characters, with an uppercase letter, lowercase letter, number, and symbol.
+            </p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="confirmPassword">Confirm password</Label>

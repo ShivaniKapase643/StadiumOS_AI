@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { requireAuth } from '../../middleware/auth';
-import { requireRole } from '../../middleware/rbac';
+import { requireRole, ADMIN_ROLES } from '../../middleware/rbac';
 import { validate } from '../../middleware/validate';
 import { Role } from '@prisma/client';
 import { createZoneSchema, updateZoneStatusSchema } from './twin.validation';
@@ -17,7 +17,8 @@ import {
 const router = Router();
 router.use(requireAuth);
 
-const MANAGE_ROLES = [Role.SUPER_ADMIN, Role.STADIUM_ADMIN];
+// Local alias for readability at each call site below.
+const MANAGE_ROLES = ADMIN_ROLES;
 
 /**
  * @openapi

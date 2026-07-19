@@ -22,6 +22,10 @@ export async function charge(_amount: number, _method: PaymentMethod): Promise<C
   return { status: succeeds ? PaymentStatus.SUCCESS : PaymentStatus.FAILED, transactionRef };
 }
 
+/**
+ * Mock refund processor, same pattern as charge() above — a self-contained
+ * simulator (~97% success) rather than a call to a real gateway's refund API.
+ */
 export async function processRefund(_amount: number): Promise<{ status: 'PROCESSED' | 'REJECTED' }> {
   await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300));
   return { status: Math.random() < 0.97 ? 'PROCESSED' : 'REJECTED' };

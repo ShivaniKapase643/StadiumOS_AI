@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { SeatTier } from '@prisma/client';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { requireAuth } from '../../middleware/auth';
-import { requireRole } from '../../middleware/rbac';
+import { requireRole, ADMIN_ROLES } from '../../middleware/rbac';
 import { validate } from '../../middleware/validate';
 import { Role } from '@prisma/client';
 import { ApiError, created, ok, paginated } from '../../utils/apiResponse';
@@ -13,7 +13,7 @@ import * as fanService from './fan-experience.service';
 const router = Router();
 router.use(requireAuth);
 
-const STAFF_ROLES = [Role.SUPER_ADMIN, Role.STADIUM_ADMIN, Role.VOLUNTEER, Role.SECURITY_OFFICER];
+const STAFF_ROLES = [...ADMIN_ROLES, Role.VOLUNTEER, Role.SECURITY_OFFICER];
 
 const createLostFoundSchema = z.object({
   body: z.object({ description: z.string().min(3).max(300), category: z.string().min(2).max(50), location: z.string().max(100).optional() }),

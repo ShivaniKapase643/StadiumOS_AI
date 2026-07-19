@@ -12,6 +12,14 @@ export function requireRole(...allowed: Role[]) {
   };
 }
 
+/**
+ * The two org-admin roles that appear as a prefix in nearly every
+ * per-module role list (e.g. `[...ADMIN_ROLES, Role.SECURITY_OFFICER]`) —
+ * shared here so "who counts as an admin" has one source of truth instead
+ * of being repeated as a literal pair across eight route files.
+ */
+export const ADMIN_ROLES: Role[] = [Role.SUPER_ADMIN, Role.STADIUM_ADMIN];
+
 export const ALL_STAFF_ROLES: Role[] = [
   Role.SUPER_ADMIN,
   Role.STADIUM_ADMIN,

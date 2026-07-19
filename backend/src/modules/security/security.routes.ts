@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { requireAuth } from '../../middleware/auth';
-import { requireRole } from '../../middleware/rbac';
+import { requireRole, ADMIN_ROLES } from '../../middleware/rbac';
 import { validate } from '../../middleware/validate';
 import { ApiError, created, ok, paginated } from '../../utils/apiResponse';
 import { parsePagination } from '../../utils/pagination';
@@ -13,7 +13,7 @@ import { logAudit } from '../users/audit.service';
 const router = Router();
 router.use(requireAuth);
 
-const SECURITY_ROLES = [Role.SUPER_ADMIN, Role.STADIUM_ADMIN, Role.SECURITY_OFFICER];
+const SECURITY_ROLES = [...ADMIN_ROLES, Role.SECURITY_OFFICER];
 
 const createIncidentSchema = z.object({
   body: z.object({
