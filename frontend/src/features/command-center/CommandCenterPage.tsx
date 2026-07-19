@@ -158,6 +158,7 @@ export default function CommandCenterPage() {
                 className="h-7 w-7"
                 onClick={toggleSound}
                 title={soundEnabled ? 'Mute alert sound' : 'Play a chime on new alerts'}
+                aria-label={soundEnabled ? 'Mute alert sound' : 'Play a chime on new alerts'}
               >
                 {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
               </Button>
