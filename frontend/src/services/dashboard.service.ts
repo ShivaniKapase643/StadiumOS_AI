@@ -6,6 +6,30 @@ export async function getKpis() {
   return data.data;
 }
 
+export interface CategoryScore {
+  score: number;
+  status: 'green' | 'yellow' | 'orange' | 'red';
+}
+
+export interface StadiumHealthScore {
+  overall: number;
+  overallStatus: 'green' | 'yellow' | 'orange' | 'red';
+  categories: {
+    security: CategoryScore;
+    crowd: CategoryScore;
+    parking: CategoryScore;
+    medical: CategoryScore;
+    energy: CategoryScore;
+    maintenance: CategoryScore;
+  };
+  aiRecommendationCount: number;
+}
+
+export async function getHealthScore() {
+  const { data } = await api.get<{ data: StadiumHealthScore }>('/dashboard/health-score');
+  return data.data;
+}
+
 export async function getAttendanceTrend() {
   const { data } = await api.get<{ data: Array<{ time: string; attendance: number }> }>('/dashboard/attendance-trend');
   return data.data;

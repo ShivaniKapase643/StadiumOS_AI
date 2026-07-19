@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
-import { MapContainer, CircleMarker, Polygon, Popup, Marker } from 'react-leaflet';
+import { useEffect, useMemo } from 'react';
+import { MapContainer, CircleMarker, Polygon, Popup, Marker, useMap } from 'react-leaflet';
 import L, { CRS } from 'leaflet';
+import { useReducedMotion } from 'framer-motion';
 import { HeatmapLayer } from './HeatmapLayer';
 import { ZONE_TYPE_COLOR, ZONE_TYPE_LABEL } from '@/lib/zoneMeta';
 import { densityLevelColor } from '@/lib/chartColors';
@@ -16,10 +17,59 @@ interface StadiumMapProps {
   activeAlertZoneIds: Set<string>;
   visibleTypes: Set<ZoneType>;
   showHeatmap: boolean;
+  /** Autonomous Drone View — an animated marker orbiting the stadium bowl. Off by default; purely cosmetic, no data changes. */
+  droneMode?: boolean;
 }
 
 function toLatLng(x: number, y: number, mapHeight: number): [number, number] {
   return [mapHeight - y, x];
+}
+
+/** Imperatively animates a Leaflet marker around the bowl via requestAnimationFrame
+ * (not React state) so a ~60fps orbit doesn't trigger a React re-render every frame. */
+function DroneMarker({ mapWidth, mapHeight }: { mapWidth: number; mapHeight: number }) {
+  const map = useMap();
+  const prefersReducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    const cx = mapWidth / 2;
+    const cy = mapHeight / 2;
+    const rx = mapWidth / 2 - 40;
+    const ry = mapHeight / 2 - 40;
+
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-base shadow-lg">🚁</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+    });
+    const marker = L.marker(toLatLng(cx + rx, cy, mapHeight), { icon, interactive: false, zIndexOffset: 1000 }).addTo(map);
+
+    if (prefersReducedMotion) {
+      return () => {
+        marker.remove();
+      };
+    }
+
+    const LAP_DURATION_MS = 18000;
+    const start = performance.now();
+    let frameId: number;
+
+    function tick(now: number) {
+      const elapsed = (now - start) % LAP_DURATION_MS;
+      const angle = (elapsed / LAP_DURATION_MS) * Math.PI * 2;
+      marker.setLatLng(toLatLng(cx + rx * Math.cos(angle), cy + ry * Math.sin(angle), mapHeight));
+      frameId = requestAnimationFrame(tick);
+    }
+    frameId = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      marker.remove();
+    };
+  }, [map, mapWidth, mapHeight, prefersReducedMotion]);
+
+  return null;
 }
 
 function ellipsePoints(cx: number, cy: number, rx: number, ry: number, mapHeight: number, segments = 64): Array<[number, number]> {
@@ -42,6 +92,7 @@ export function StadiumMap({
   activeAlertZoneIds,
   visibleTypes,
   showHeatmap,
+  droneMode = false,
 }: StadiumMapProps) {
   const { theme } = useTheme();
   const bounds: [[number, number], [number, number]] = [
@@ -109,6 +160,7 @@ export function StadiumMap({
       attributionControl={false}
     >
       <HeatmapLayer points={heatPoints} visible={showHeatmap} />
+      {droneMode && <DroneMarker mapWidth={mapWidth} mapHeight={mapHeight} />}
 
       <Polygon positions={bowlPoints} pathOptions={{ color: '#94a3b8', weight: 2, fillColor: '#cbd5e1', fillOpacity: 0.25 }} />
       <Polygon positions={pitchPoints} pathOptions={{ color: '#16a34a', weight: 2, fillColor: '#22c55e', fillOpacity: 0.35 }} />

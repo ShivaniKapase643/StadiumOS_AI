@@ -37,3 +37,21 @@ export async function getPeakHours() {
   const { data } = await api.get<{ data: PeakHour[] }>('/crowd-intelligence/peak-hours');
   return data.data;
 }
+
+export interface ZoneRiskPrediction {
+  zoneId: string;
+  zoneName: string;
+  currentCapacityPct: number;
+  currentDensityLevel: string;
+  predictedCapacityPct: number;
+  predictedDensityLevel: string;
+  horizonMinutes: number;
+  confidencePct: number;
+  reason: string;
+  willEscalate: boolean;
+}
+
+export async function predictCrowdRisk(stadiumId: string) {
+  const { data } = await api.get<{ data: ZoneRiskPrediction[] }>(`/crowd-intelligence/predict/${stadiumId}`);
+  return data.data;
+}

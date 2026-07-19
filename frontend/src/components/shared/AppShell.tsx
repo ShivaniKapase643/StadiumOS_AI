@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
+import { AICopilotWidget } from './AICopilotWidget';
 
 export function AppShell() {
   const location = useLocation();
@@ -22,6 +23,7 @@ export function AppShell() {
           </motion.div>
         </main>
       </div>
+      <AICopilotWidget />
     </div>
   );
 }

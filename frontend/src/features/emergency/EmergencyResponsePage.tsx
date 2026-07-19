@@ -1,13 +1,86 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Ambulance, Loader2, MapPinned, Siren } from 'lucide-react';
+import { Ambulance, DoorOpen, Loader2, MapPinned, Siren, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatDateTime } from '@/lib/utils';
 import { extractErrorMessage } from '@/services/api';
 import { useSocketEvent } from '@/hooks/useSocket';
 import * as emergencyService from '@/services/emergency.service';
+import * as twinService from '@/services/twin.service';
+import { useStadiumOverview } from '@/features/digital-twin/useTwinData';
+import { IncidentActionPlanDialog } from './IncidentActionPlanDialog';
+
+function EvacuationSimulator() {
+  const { data: stadium } = useStadiumOverview();
+  const { data: zones = [] } = useQuery({
+    queryKey: ['twin', 'zones', stadium?.id],
+    queryFn: () => twinService.listZones(stadium!.id),
+    enabled: Boolean(stadium?.id),
+  });
+  const [selectedZoneId, setSelectedZoneId] = useState<string>('');
+
+  const { data: result, isFetching } = useQuery({
+    queryKey: ['emergency', 'evacuation-simulate', selectedZoneId],
+    queryFn: () => emergencyService.simulateEvacuation(selectedZoneId),
+    enabled: Boolean(selectedZoneId),
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <DoorOpen className="h-4 w-4 text-primary" /> Smart Evacuation Simulator
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select a zone to evacuate from" />
+          </SelectTrigger>
+          <SelectContent>
+            {zones.map((z) => (
+              <SelectItem key={z.id} value={z.id}>
+                {z.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {isFetching && <p className="text-sm text-muted-foreground">Calculating routes…</p>}
+
+        {result && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-md border border-success/40 bg-success/5 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-success">Fastest Exit</p>
+              <p className="text-lg font-semibold">{result.fastest.gateName}</p>
+              <p className="text-sm text-muted-foreground">
+                {result.fastest.etaMinutes} min &middot; {result.fastest.distanceMeters}m
+              </p>
+            </div>
+            {result.alternative ? (
+              <div className="rounded-md border border-primary/40 bg-primary/5 p-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-primary">Recommended Alternative</p>
+                <p className="text-lg font-semibold">{result.alternative.gateName}</p>
+                <p className="text-sm text-muted-foreground">
+                  {result.alternative.etaMinutes} min &middot; {result.alternative.distanceMeters}m
+                </p>
+                {result.reason && <p className="mt-1 text-xs text-muted-foreground">{result.reason}</p>}
+              </div>
+            ) : (
+              <div className="rounded-md border border-border p-3 text-sm text-muted-foreground">
+                No congestion detected — the fastest route is also the least crowded.
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 const STATUS_VARIANT: Record<string, 'default' | 'warning' | 'destructive' | 'success'> = {
   OPEN: 'destructive',
@@ -18,6 +91,7 @@ const STATUS_VARIANT: Record<string, 'default' | 'warning' | 'destructive' | 'su
 
 export default function EmergencyResponsePage() {
   const queryClient = useQueryClient();
+  const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
   const { data: alerts = [], isLoading } = useQuery({ queryKey: ['emergency', 'sos'], queryFn: emergencyService.listSosAlerts, refetchInterval: 15_000 });
   const { data: plans = [] } = useQuery({ queryKey: ['emergency', 'plans'], queryFn: emergencyService.listEvacuationPlans });
 
@@ -72,7 +146,7 @@ export default function EmergencyResponsePage() {
                 </p>
               )}
               {alert.status === 'OPEN' && (
-                <div className="flex gap-2 pt-2">
+                <div className="flex flex-wrap gap-2 pt-2">
                   <Button
                     size="sm"
                     onClick={() => dispatchMutation.mutate(alert.id)}
@@ -88,6 +162,9 @@ export default function EmergencyResponsePage() {
                     disabled={resolveMutation.isPending && resolveMutation.variables === alert.id}
                   >
                     Resolve
+                  </Button>
+                  <Button size="sm" variant="outline" className="gap-1" onClick={() => setSelectedAlertId(alert.id)}>
+                    <Sparkles className="h-3.5 w-3.5" /> AI Response
                   </Button>
                 </div>
               )}
@@ -121,6 +198,10 @@ export default function EmergencyResponsePage() {
           ))}
         </CardContent>
       </Card>
+
+      <EvacuationSimulator />
+
+      <IncidentActionPlanDialog alertId={selectedAlertId} onClose={() => setSelectedAlertId(null)} />
     </div>
   );
 }

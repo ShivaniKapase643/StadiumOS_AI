@@ -78,3 +78,20 @@ export async function findSeats(criteria: SeatSearchCriteria) {
   const { data } = await api.get<{ data: SeatSearchResult[] }>('/fan-experience/seat-finder', { params });
   return data.data;
 }
+
+export interface ConciergeInfoDto {
+  greetingName: string;
+  seat: { section: string; row: string; number: number; tier: string } | null;
+  parking: { lotName: string; slotCode: string } | null;
+  walkingTimeToSeatMinutes: number | null;
+  nearestWashroom: string | null;
+  nearestMedical: string | null;
+  foodSuggestion: { vendorName: string; itemName: string; price: number } | null;
+  estimatedFoodWaitMinutes: number | null;
+  weather: { temperatureC: number; condition: string } | null;
+}
+
+export async function getConciergeInfo() {
+  const { data } = await api.get<{ data: ConciergeInfoDto }>('/fan-experience/concierge');
+  return data.data;
+}

@@ -1,19 +1,37 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Activity, ParkingSquare, ShieldAlert, Siren, Radio, Trophy, Volume2, VolumeX } from 'lucide-react';
+import { toast } from 'sonner';
+import { Activity, ParkingSquare, ShieldAlert, Siren, Radio, Trophy, Volume2, VolumeX, Gauge, Mic, MicOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/shared/StatCard';
+import { StadiumHealthGauge } from '@/components/shared/StadiumHealthGauge';
 import { formatDateTime } from '@/lib/utils';
 import { useKpis, useUpcomingMatches } from '@/features/dashboard/useDashboardData';
 import { useLiveSnapshot, useStadiumOverview } from '@/features/digital-twin/useTwinData';
 import { StadiumMap } from '@/features/digital-twin/StadiumMap';
 import { AIInsightsPanel } from '@/features/ai/AIInsightsPanel';
+import { IncidentActionPlanDialog } from '@/features/emergency/IncidentActionPlanDialog';
 import { useSocketEvent } from '@/hooks/useSocket';
+import { useVoiceCommand } from '@/hooks/useVoiceCommand';
 import * as tournamentService from '@/services/tournament.service';
+import * as dashboardService from '@/services/dashboard.service';
+
+const VOICE_COMMANDS: Array<{ pattern: RegExp; path: string; label: string }> = [
+  { pattern: /digital twin/, path: '/digital-twin', label: 'Digital Twin' },
+  { pattern: /parking/, path: '/parking', label: 'Parking' },
+  { pattern: /emergenc|ambulance|evacuat/, path: '/emergency', label: 'Emergency Response' },
+  { pattern: /security/, path: '/security', label: 'Security Center' },
+  { pattern: /crowd/, path: '/crowd-intelligence', label: 'Crowd Intelligence' },
+  { pattern: /seat|ticket/, path: '/ticketing', label: 'Ticketing' },
+  { pattern: /tournament|match|score/, path: '/tournaments', label: 'Tournaments' },
+  { pattern: /report/, path: '/reports', label: 'Reports' },
+  { pattern: /dashboard/, path: '/dashboard', label: 'Dashboard' },
+];
 
 function playAlertChime() {
   try {
@@ -39,6 +57,7 @@ function playAlertChime() {
 
 export default function CommandCenterPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { data: kpis, isLoading: kpisLoading } = useKpis();
   const { data: stadium } = useStadiumOverview();
   const { data: snapshot, crowdOverrides, equipmentOverrides, alerts } = useLiveSnapshot(stadium?.id);
@@ -92,6 +111,24 @@ export default function CommandCenterPage() {
     });
   };
 
+  const { data: health } = useQuery({
+    queryKey: ['dashboard', 'health-score'],
+    queryFn: dashboardService.getHealthScore,
+    refetchInterval: 30000,
+  });
+
+  const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
+
+  const voice = useVoiceCommand((transcript) => {
+    const match = VOICE_COMMANDS.find((c) => c.pattern.test(transcript.toLowerCase()));
+    if (match) {
+      toast.success(`"${transcript}" → Opening ${match.label}`);
+      navigate(match.path);
+    } else {
+      toast.info(`Didn't recognize "${transcript}" — try "show parking" or "open digital twin".`);
+    }
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -99,13 +136,27 @@ export default function CommandCenterPage() {
           <h1 className="text-2xl font-semibold">Command Center</h1>
           <p className="text-sm text-muted-foreground">Mission-control view for stadium operators &mdash; live, all-in-one.</p>
         </div>
-        <Badge variant="success" className="gap-1.5">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success-foreground/60" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-success-foreground" />
-          </span>
-          Live
-        </Badge>
+        <div className="flex items-center gap-2">
+          {voice.isSupported && (
+            <Button
+              variant={voice.isListening ? 'destructive' : 'outline'}
+              size="sm"
+              className="gap-1.5"
+              onClick={() => (voice.isListening ? voice.stop() : voice.start())}
+              title="Voice command — try 'show parking' or 'open digital twin'"
+            >
+              {voice.isListening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+              {voice.isListening ? 'Listening…' : 'Voice'}
+            </Button>
+          )}
+          <Badge variant="success" className="gap-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success-foreground/60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-success-foreground" />
+            </span>
+            Live
+          </Badge>
+        </div>
       </div>
 
       {kpisLoading || !kpis ? (
@@ -121,6 +172,19 @@ export default function CommandCenterPage() {
           <StatCard label="Security Alerts" value={String(kpis.security.openIncidents)} icon={ShieldAlert} accent={kpis.security.openIncidents > 0 ? 'destructive' : 'success'} />
           <StatCard label="Emergency Alerts" value={String(kpis.emergency.openAlerts)} icon={Siren} accent={kpis.emergency.openAlerts > 0 ? 'destructive' : 'success'} />
         </div>
+      )}
+
+      {health && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Gauge className="h-4 w-4 text-primary" /> Mission Control &mdash; Stadium Health
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <StadiumHealthGauge health={health} />
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
@@ -181,10 +245,17 @@ export default function CommandCenterPage() {
                         NEW
                       </Badge>
                     )}
-                    <p className="font-medium text-destructive">{alert.type}</p>
-                    <p className="text-muted-foreground">
-                      {alert.zoneName ?? 'Stadium-wide'} &middot; {formatDateTime(alert.createdAt)}
-                    </p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-medium text-destructive">{alert.type}</p>
+                        <p className="text-muted-foreground">
+                          {alert.zoneName ?? 'Stadium-wide'} &middot; {formatDateTime(alert.createdAt)}
+                        </p>
+                      </div>
+                      <Button size="sm" variant="outline" className="h-6 shrink-0 px-2 text-[10px]" onClick={() => setSelectedAlertId(alert.id)}>
+                        AI Response
+                      </Button>
+                    </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -225,6 +296,8 @@ export default function CommandCenterPage() {
       </div>
 
       <AIInsightsPanel />
+
+      <IncidentActionPlanDialog alertId={selectedAlertId} onClose={() => setSelectedAlertId(null)} />
     </div>
   );
 }

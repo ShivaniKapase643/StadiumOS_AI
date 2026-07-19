@@ -55,3 +55,24 @@ export async function getLeaderboard(tournamentId: string) {
   const { data } = await api.get<{ data: LeaderboardEntry[] }>(`/tournaments/${tournamentId}/leaderboard`);
   return data.data;
 }
+
+export interface MatchPredictionDto {
+  fixtureId: string;
+  homeTeam: string;
+  awayTeam: string;
+  isActual: boolean;
+  homeWinPct: number;
+  drawPct: number;
+  awayWinPct: number;
+  expectedHomeGoals: number;
+  expectedAwayGoals: number;
+  actualHomeGoals?: number;
+  actualAwayGoals?: number;
+  confidencePct: number;
+  basis: string;
+}
+
+export async function predictFixture(fixtureId: string) {
+  const { data } = await api.get<{ data: MatchPredictionDto }>(`/tournaments/fixtures/${fixtureId}/predict`);
+  return data.data;
+}

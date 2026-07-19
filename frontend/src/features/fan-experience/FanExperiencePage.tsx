@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { Bot, Loader2, MapPin, Search, ShoppingBag, Send } from 'lucide-react';
+import { Bot, Loader2, MapPin, Search, ShoppingBag, Send, Sparkles, Armchair, ParkingSquare, Utensils, CloudSun } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PaginationControls } from '@/components/shared/PaginationControls';
 import { formatCurrency } from '@/lib/utils';
@@ -320,6 +321,98 @@ function SeatFinderTab() {
   );
 }
 
+function ConciergeTab() {
+  const { data: info, isLoading } = useQuery({ queryKey: ['fan', 'concierge'], queryFn: fanService.getConciergeInfo });
+
+  if (isLoading || !info) return <Skeleton className="h-64 w-full" />;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Sparkles className="h-4 w-4 text-primary" /> Hello, {info.greetingName}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="flex items-start gap-3 rounded-md border border-border p-3">
+          <Armchair className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div>
+            <p className="text-xs text-muted-foreground">Your seat</p>
+            {info.seat ? (
+              <p className="text-sm font-medium">
+                {info.seat.section}-{info.seat.row}
+                {info.seat.number} <Badge variant="outline">{info.seat.tier}</Badge>
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">No active ticket</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-start gap-3 rounded-md border border-border p-3">
+          <ParkingSquare className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div>
+            <p className="text-xs text-muted-foreground">Parking</p>
+            {info.parking ? (
+              <>
+                <p className="text-sm font-medium">
+                  {info.parking.lotName} &middot; Slot {info.parking.slotCode}
+                </p>
+                {info.walkingTimeToSeatMinutes !== null && (
+                  <p className="text-xs text-muted-foreground">~{info.walkingTimeToSeatMinutes} min walk to your seat</p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">No active reservation</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-start gap-3 rounded-md border border-border p-3">
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div>
+            <p className="text-xs text-muted-foreground">Nearest facilities</p>
+            <p className="text-sm">{info.nearestWashroom ?? 'Not configured'}</p>
+            <p className="text-sm">{info.nearestMedical ?? 'Not configured'}</p>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-3 rounded-md border border-border p-3">
+          <Utensils className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div>
+            <p className="text-xs text-muted-foreground">Suggested food</p>
+            {info.foodSuggestion ? (
+              <>
+                <p className="text-sm font-medium">
+                  {info.foodSuggestion.itemName} &middot; {formatCurrency(info.foodSuggestion.price)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {info.foodSuggestion.vendorName}
+                  {info.estimatedFoodWaitMinutes !== null && ` · ~${info.estimatedFoodWaitMinutes} min wait`}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">No vendors available right now</p>
+            )}
+          </div>
+        </div>
+
+        {info.weather && (
+          <div className="flex items-start gap-3 rounded-md border border-border p-3 sm:col-span-2">
+            <CloudSun className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <div>
+              <p className="text-xs text-muted-foreground">Weather</p>
+              <p className="text-sm">
+                {info.weather.temperatureC}&deg;C, {info.weather.condition.replaceAll('_', ' ').toLowerCase()}
+              </p>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function FanExperiencePage() {
   return (
     <div className="space-y-6">
@@ -330,11 +423,15 @@ export default function FanExperiencePage() {
 
       <Tabs defaultValue="chatbot">
         <TabsList>
+          <TabsTrigger value="concierge">VIP Concierge</TabsTrigger>
           <TabsTrigger value="chatbot">AI Chatbot</TabsTrigger>
           <TabsTrigger value="lost-found">Lost &amp; Found</TabsTrigger>
           <TabsTrigger value="food">Food Ordering</TabsTrigger>
           <TabsTrigger value="seats">Seat Finder</TabsTrigger>
         </TabsList>
+        <TabsContent value="concierge">
+          <ConciergeTab />
+        </TabsContent>
         <TabsContent value="chatbot">
           <ChatbotTab />
         </TabsContent>

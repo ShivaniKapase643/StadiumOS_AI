@@ -14,6 +14,7 @@ import * as tournamentService from '@/services/tournament.service';
 import { AddTeamDialog } from './AddTeamDialog';
 import { GenerateScheduleDialog } from './GenerateScheduleDialog';
 import { UpdateScoreDialog } from './UpdateScoreDialog';
+import { FixturePredictionCell } from './FixturePredictionCell';
 
 export default function TournamentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -102,6 +103,7 @@ export default function TournamentDetailPage() {
                         <TableHead>Kickoff</TableHead>
                         <TableHead>Score</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>AI Prediction</TableHead>
                         <TableHead />
                       </TableRow>
                     </TableHeader>
@@ -117,6 +119,9 @@ export default function TournamentDetailPage() {
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">{fixture.status}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <FixturePredictionCell fixtureId={fixture.id} />
                           </TableCell>
                           <TableCell>
                             <RoleGate roles={SCORE_MATCH_ROLES}>
