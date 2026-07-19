@@ -147,11 +147,11 @@ export async function createBooking(
     soldCountByTicketType.set(selection.ticketTypeId, (soldCountByTicketType.get(selection.ticketTypeId) ?? 0) + 1);
   }
 
-  await Promise.all([
+  const [confirmedBooking] = await Promise.all([
+    prisma.booking.update({ where: { id: booking.id }, data: { status: BookingStatus.CONFIRMED } }),
     ...Array.from(soldCountByTicketType.entries()).map(([ticketTypeId, count]) =>
       prisma.ticketType.update({ where: { id: ticketTypeId }, data: { sold: { increment: count } } })
     ),
-    prisma.booking.update({ where: { id: booking.id }, data: { status: BookingStatus.CONFIRMED } }),
   ]);
 
   const tickets = await prisma.ticket.findMany({ where: { id: { in: ticketRows.map((t) => t.id) } } });
@@ -173,7 +173,7 @@ export async function createBooking(
     });
   }
 
-  return { booking, payment, tickets };
+  return { booking: confirmedBooking, payment, tickets };
 }
 
 export async function getMyTickets(userId: string) {

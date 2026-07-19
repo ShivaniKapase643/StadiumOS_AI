@@ -1,5 +1,7 @@
 # Smart Stadium OS + Digital Twin
 
+[![CI](https://github.com/ShivaniKapase643/StadiumOS_AI/actions/workflows/ci.yml/badge.svg)](https://github.com/ShivaniKapase643/StadiumOS_AI/actions/workflows/ci.yml)
+
 **An AI-powered intelligent stadium and tournament operations platform.**
 
 An enterprise SaaS-style platform for running large-scale stadium events (FIFA World Cup, IPL,
@@ -152,18 +154,57 @@ The seed script creates one account per role, all with password `Password123!`:
 
 ## Testing
 
-Both apps use Vitest. Run from each workspace:
+Both apps use Vitest, with React Testing Library on the frontend and Supertest for the backend's
+HTTP-level integration suite. CI (`.github/workflows/ci.yml`) runs all of it — typecheck, lint,
+unit tests, integration tests, and a production build — on every push and PR, against a real
+disposable Postgres 16 service container (not a mock).
 
 ```bash
-cd backend && npm run test   # JWT sign/verify, QR ticket signature verification + tamper
-                              # detection, round-robin schedule generator correctness
-cd frontend && npm run test  # utils (cn/formatCurrency/formatNumber), RBAC nav filtering,
-                              # component render tests
+# Backend
+cd backend
+npm run test                  # unit tests — pure logic, Prisma mocked
+npm run test:integration      # integration tests — real Express app + real Postgres via Supertest
+npm run test:coverage         # unit tests with a v8 coverage report
+npm run test:coverage:integration
+
+# Frontend
+cd frontend
+npm run test                  # component + hook tests (React Testing Library)
+npm run test:coverage         # with a v8 coverage report
 ```
 
-Coverage is intentionally focused on pure logic that's cheap to test in isolation (crypto/signing,
-scheduling algorithms, RBAC filtering) rather than full integration tests against a live database,
-which would require a dedicated test database out of scope for this build.
+**What's covered:**
+
+| Layer | Backend | Frontend |
+|---|---|---|
+| Auth | Register/login/refresh/logout, RBAC on privileged routes, **refresh-token rotation + reuse-detection** (a stolen/replayed token revokes every session for that account), deactivated-account login rejection | RBAC nav filtering (`permissions.test.ts`) |
+| Ticketing | Full booking workflow (seat select → mock payment → QR issuance), seat-conflict (409), declined-payment rollback, **QR scan/verification** (valid, tampered, already-used), refunds, ownership checks | `SeatMap` — selection, disabled/booked seats, aria state, empty state |
+| Tournaments | Create/list with pagination, RBAC, date-range validation (found via this test — endDate was never checked against startDate) | `TournamentsPage` — loading skeleton, data render, empty state, failed-fetch behavior, RBAC-gated create button |
+| Digital Twin | Overview, zone CRUD, live snapshot (zones + parking + equipment + alerts), empty-zone-list state, 404s | — |
+| Security / Emergency / Parking | Incident + SOS + reservation CRUD, RBAC, conflict/validation/ownership edge cases | — |
+| Socket.IO | `emitToAll` broadcasts to the `broadcast` room with the right event name + payload; safe no-op before init | — |
+| Shared | — | `PaginationControls`, `useCountUp` (reduced-motion + format-preservation branches), `Badge` |
+
+Mocking: the ticketing integration suite mocks `payment.service` (an intentionally-random ~92%
+success simulator) so payment-success and payment-decline paths are deterministic instead of
+flaky; a separate unit suite mocks Prisma entirely to pin down `createBooking`'s validation/conflict
+branches and `auth.service`'s edge cases in isolation, in milliseconds, with no database.
+
+**Coverage, honestly reported** (v8, `coverage.all: true` so untested files count as 0% rather
+than being silently omitted — see each `vitest.config.ts`):
+
+| | Statements | Notes |
+|---|---|---|
+| Backend, unit suite only | ~8% | Low in isolation because most business logic is exercised by the *integration* suite instead (real DB, not mocked) — Vitest doesn't currently merge unit + integration coverage into one number in this setup. |
+| Frontend | ~6% | 6 feature-level pages/hooks/components have real tests; the remaining ~15 feature pages, most services, and all dialogs are untested. |
+
+These are not 95%+, and this README won't claim otherwise. The integration suite (auth, ticketing,
+tournaments, twin, security, emergency, parking — ~65 assertions across 8 files) covers meaningfully
+more real business logic than the unit-coverage number alone suggests, but an honest single number
+for "how much of this app is tested" is still low. The highest-leverage next additions would be
+integration tests for the remaining untested backend services (dashboard, fan-experience, vendor,
+maintenance, notifications, reports, sustainability, ai) and component tests for the untested
+frontend feature pages.
 
 ## Deployment
 
