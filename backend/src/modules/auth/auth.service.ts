@@ -77,7 +77,20 @@ export async function refresh(refreshToken: string) {
   }
 
   const stored = await prisma.refreshToken.findUnique({ where: { token: refreshToken } });
-  if (!stored || stored.revoked || stored.expiresAt < new Date()) {
+  if (!stored) {
+    throw ApiError.unauthorized('Invalid or expired refresh token');
+  }
+
+  if (stored.revoked) {
+    // Refresh tokens are single-use (rotated on every refresh below). Seeing
+    // an already-revoked one presented again means it leaked — someone else
+    // has a copy of a token this user already exchanged. Kill every active
+    // session for the account rather than just rejecting this one request.
+    await prisma.refreshToken.updateMany({ where: { userId: stored.userId, revoked: false }, data: { revoked: true } });
+    throw ApiError.unauthorized('Refresh token reuse detected; all sessions for this account have been revoked');
+  }
+
+  if (stored.expiresAt < new Date()) {
     throw ApiError.unauthorized('Refresh token has been revoked or expired');
   }
 

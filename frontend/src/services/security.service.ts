@@ -28,9 +28,11 @@ export interface PatrolLogDto {
   zone: { name: string };
 }
 
-export async function listIncidents() {
-  const { data } = await api.get<{ data: IncidentDto[] }>('/security/incidents');
-  return data.data;
+export async function listIncidents(page = 1) {
+  const { data } = await api.get<{ data: IncidentDto[]; meta: { total: number; page: number; pageSize: number } }>('/security/incidents', {
+    params: { page },
+  });
+  return data;
 }
 
 export async function createIncident(input: { type: string; severity: string; description: string; zoneId?: string }) {

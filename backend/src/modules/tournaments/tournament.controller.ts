@@ -1,10 +1,13 @@
 import { Request, Response } from 'express';
 import * as tournamentService from './tournament.service';
-import { created, ok } from '../../utils/apiResponse';
+import { created, ok, paginated } from '../../utils/apiResponse';
+import { parsePagination } from '../../utils/pagination';
 import { logAudit } from '../users/audit.service';
 
-export async function listTournamentsHandler(_req: Request, res: Response) {
-  ok(res, await tournamentService.listTournaments());
+export async function listTournamentsHandler(req: Request, res: Response) {
+  const { page, pageSize } = parsePagination(req);
+  const result = await tournamentService.listTournaments(page, pageSize);
+  paginated(res, result.items, { total: result.total, page: result.page, pageSize: result.pageSize });
 }
 
 export async function createTournamentHandler(req: Request, res: Response) {

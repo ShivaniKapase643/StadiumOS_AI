@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, afterAll } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../app';
 import { prisma } from '../../config/db';
@@ -92,5 +92,35 @@ describe('Auth API (integration)', () => {
       .send({ name: 'Should Not Be Created', sport: 'Football', startDate: '2026-01-01', endDate: '2026-01-31' });
 
     expect(res.status).toBe(403);
+  });
+
+  it('rotates the refresh token on use, and issues a fresh working pair', async () => {
+    const login = await request(app).post('/api/auth/login').send({ email: testEmail, password: testPassword });
+    const oldRefreshToken = login.body.data.refreshToken;
+
+    const res = await request(app).post('/api/auth/refresh').send({ refreshToken: oldRefreshToken });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.refreshToken).toBeTruthy();
+    expect(res.body.data.refreshToken).not.toBe(oldRefreshToken);
+  });
+
+  it('detects refresh-token reuse and revokes every session for the account', async () => {
+    const login = await request(app).post('/api/auth/login').send({ email: testEmail, password: testPassword });
+    const originalRefreshToken = login.body.data.refreshToken;
+
+    // First use rotates it away (this is the legitimate client).
+    const firstUse = await request(app).post('/api/auth/refresh').send({ refreshToken: originalRefreshToken });
+    expect(firstUse.status).toBe(200);
+    const rotatedRefreshToken = firstUse.body.data.refreshToken;
+
+    // Reusing the now-stale token simulates an attacker replaying a leaked one.
+    const replay = await request(app).post('/api/auth/refresh').send({ refreshToken: originalRefreshToken });
+    expect(replay.status).toBe(401);
+
+    // The theft response revokes ALL sessions — even the legitimate client's
+    // just-rotated token should no longer work.
+    const afterTheftResponse = await request(app).post('/api/auth/refresh').send({ refreshToken: rotatedRefreshToken });
+    expect(afterTheftResponse.status).toBe(401);
   });
 });

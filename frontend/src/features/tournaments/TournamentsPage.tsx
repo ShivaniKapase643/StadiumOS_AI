@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Trophy, Calendar, Users } from 'lucide-react';
@@ -5,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RoleGate } from '@/components/shared/RoleGate';
+import { PaginationControls } from '@/components/shared/PaginationControls';
 import { MANAGE_TOURNAMENT_ROLES } from '@/lib/permissions';
 import { formatDateTime } from '@/lib/utils';
 import * as tournamentService from '@/services/tournament.service';
@@ -18,7 +20,9 @@ const statusVariant: Record<string, 'default' | 'success' | 'secondary' | 'destr
 };
 
 export default function TournamentsPage() {
-  const { data: tournaments = [], isLoading } = useQuery({ queryKey: ['tournaments'], queryFn: tournamentService.listTournaments });
+  const [page, setPage] = useState(1);
+  const { data, isLoading } = useQuery({ queryKey: ['tournaments', page], queryFn: () => tournamentService.listTournaments(page) });
+  const tournaments = data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -65,6 +69,10 @@ export default function TournamentsPage() {
           ))}
           {tournaments.length === 0 && <p className="text-sm text-muted-foreground">No tournaments yet.</p>}
         </div>
+      )}
+
+      {data && data.meta.total > 0 && (
+        <PaginationControls page={data.meta.page} pageSize={data.meta.pageSize} total={data.meta.total} onPageChange={setPage} />
       )}
     </div>
   );

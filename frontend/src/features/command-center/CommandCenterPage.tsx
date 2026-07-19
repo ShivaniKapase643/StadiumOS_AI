@@ -44,8 +44,8 @@ export default function CommandCenterPage() {
   const { data: snapshot, crowdOverrides, equipmentOverrides, alerts } = useLiveSnapshot(stadium?.id);
   const { data: upcomingMatches = [] } = useUpcomingMatches();
 
-  const { data: tournaments = [] } = useQuery({ queryKey: ['tournaments'], queryFn: tournamentService.listTournaments });
-  const primaryTournamentId = tournaments[0]?.id;
+  const { data: tournamentsResult } = useQuery({ queryKey: ['tournaments', 1], queryFn: () => tournamentService.listTournaments(1) });
+  const primaryTournamentId = tournamentsResult?.data[0]?.id;
   const { data: primaryTournament } = useQuery({
     queryKey: ['tournament', primaryTournamentId],
     queryFn: () => tournamentService.getTournament(primaryTournamentId!),

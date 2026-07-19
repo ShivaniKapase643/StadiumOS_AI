@@ -20,10 +20,15 @@
     --accent-foreground: 222 47% 11%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
-    --success: 142 71% 35%;
+    /* 35% lightness only hit 3.5:1 against the near-white foreground text
+       (WCAG AA needs 4.5:1 for normal-weight text, which badges use). */
+    --success: 142 71% 28%;
     --success-foreground: 210 40% 98%;
     --warning: 38 92% 45%;
-    --warning-foreground: 210 40% 98%;
+    /* Near-white text on amber only hit 2.5:1 contrast (WCAG AA needs 4.5:1
+       for normal text) — dark text matches the pattern the dark theme
+       already uses for this same color pair, at 6.8:1. */
+    --warning-foreground: 222 47% 11%;
     --border: 214 32% 89%;
     --input: 214 32% 89%;
     --ring: 217 91% 40%;
@@ -47,7 +52,8 @@
     --accent-foreground: 210 40% 98%;
     --destructive: 0 63% 45%;
     --destructive-foreground: 210 40% 98%;
-    --success: 142 60% 45%;
+    /* Same AA contrast fix as the light theme's --success above (2.5:1 unfixed). */
+    --success: 142 60% 30%;
     --success-foreground: 210 40% 98%;
     --warning: 38 92% 55%;
     --warning-foreground: 222 47% 11%;

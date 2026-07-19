@@ -2,13 +2,18 @@ import { z } from 'zod';
 import { MatchStatus } from '@prisma/client';
 
 export const createTournamentSchema = z.object({
-  body: z.object({
-    name: z.string().min(2).max(150),
-    sport: z.string().min(2).max(50),
-    startDate: z.coerce.date(),
-    endDate: z.coerce.date(),
-    stadiumId: z.string().uuid().optional(),
-  }),
+  body: z
+    .object({
+      name: z.string().min(2).max(150),
+      sport: z.string().min(2).max(50),
+      startDate: z.coerce.date(),
+      endDate: z.coerce.date(),
+      stadiumId: z.string().uuid().optional(),
+    })
+    .refine((data) => data.endDate >= data.startDate, {
+      message: 'endDate must be on or after startDate',
+      path: ['endDate'],
+    }),
 });
 
 export const createTeamSchema = z.object({

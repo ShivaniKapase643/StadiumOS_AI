@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PaginationControls } from '@/components/shared/PaginationControls';
 import { formatCurrency } from '@/lib/utils';
 import { extractErrorMessage } from '@/services/api';
 import * as aiService from '@/services/ai.service';
@@ -92,8 +93,10 @@ function LostFoundTab() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [location, setLocation] = useState('');
+  const [page, setPage] = useState(1);
 
-  const { data: items = [] } = useQuery({ queryKey: ['fan', 'lost-found'], queryFn: fanService.listLostFound });
+  const { data } = useQuery({ queryKey: ['fan', 'lost-found', page], queryFn: () => fanService.listLostFound(page) });
+  const items = data?.data ?? [];
 
   const reportMutation = useMutation({
     mutationFn: () => fanService.reportLostFound({ description, category, location }),
@@ -147,6 +150,10 @@ function LostFoundTab() {
         ))}
         {items.length === 0 && <p className="text-sm text-muted-foreground">No items reported yet.</p>}
       </div>
+
+      {data && data.meta.total > 0 && (
+        <PaginationControls page={data.meta.page} pageSize={data.meta.pageSize} total={data.meta.total} onPageChange={setPage} />
+      )}
     </div>
   );
 }

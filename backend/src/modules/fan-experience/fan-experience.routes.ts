@@ -6,7 +6,8 @@ import { requireAuth } from '../../middleware/auth';
 import { requireRole } from '../../middleware/rbac';
 import { validate } from '../../middleware/validate';
 import { Role } from '@prisma/client';
-import { ApiError, created, ok } from '../../utils/apiResponse';
+import { ApiError, created, ok, paginated } from '../../utils/apiResponse';
+import { parsePagination } from '../../utils/pagination';
 import * as fanService from './fan-experience.service';
 
 const router = Router();
@@ -36,7 +37,14 @@ const createFoodOrderSchema = z.object({
  *     summary: "List lost & found items"
  *     tags: [Fan Experience]
  */
-router.get('/lost-found', asyncHandler(async (_req, res) => ok(res, await fanService.listLostFoundItems())));
+router.get(
+  '/lost-found',
+  asyncHandler(async (req, res) => {
+    const { page, pageSize } = parsePagination(req);
+    const result = await fanService.listLostFoundItems(page, pageSize);
+    paginated(res, result.items, { total: result.total, page: result.page, pageSize: result.pageSize });
+  })
+);
 
 /**
  * @openapi

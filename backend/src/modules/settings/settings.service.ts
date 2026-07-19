@@ -14,11 +14,17 @@ export async function updateOrganization(organizationId: string, input: { name?:
   return prisma.organization.update({ where: { id: organizationId }, data: input });
 }
 
-export async function listUsers() {
-  return prisma.user.findMany({
-    select: { id: true, name: true, email: true, role: true, isActive: true, lastLoginAt: true, createdAt: true },
-    orderBy: { createdAt: 'desc' },
-  });
+export async function listUsers(page: number, pageSize: number) {
+  const [items, total] = await Promise.all([
+    prisma.user.findMany({
+      select: { id: true, name: true, email: true, role: true, isActive: true, lastLoginAt: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.user.count(),
+  ]);
+  return { items, total, page, pageSize };
 }
 
 export async function updateUserRole(userId: string, role: Role) {

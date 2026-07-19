@@ -127,7 +127,13 @@ function ComposerTab() {
           <Label>Audience roles</Label>
           <div className="flex flex-wrap gap-2">
             {ROLE_OPTIONS.map((role) => (
-              <button key={role} type="button" onClick={() => toggleRole(role)} className="focus:outline-none">
+              <button
+                key={role}
+                type="button"
+                onClick={() => toggleRole(role)}
+                aria-pressed={roles.includes(role)}
+                className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
                 <Badge variant={roles.includes(role) ? 'default' : 'outline'} className="cursor-pointer">
                   {role}
                 </Badge>

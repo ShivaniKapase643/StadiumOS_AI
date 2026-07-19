@@ -1,9 +1,11 @@
 import { api } from './api';
 import type { Fixture, LeaderboardEntry, MatchStatus, Tournament } from '@/types';
 
-export async function listTournaments() {
-  const { data } = await api.get<{ data: Tournament[] }>('/tournaments');
-  return data.data;
+export async function listTournaments(page = 1) {
+  const { data } = await api.get<{ data: Tournament[]; meta: { total: number; page: number; pageSize: number } }>('/tournaments', {
+    params: { page },
+  });
+  return data;
 }
 
 export async function getTournament(id: string) {

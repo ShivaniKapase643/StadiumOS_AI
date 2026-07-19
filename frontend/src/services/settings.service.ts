@@ -40,9 +40,11 @@ export async function updateOrganization(input: { name?: string; logoUrl?: strin
   return data.data;
 }
 
-export async function listUsers() {
-  const { data } = await api.get<{ data: OrgUser[] }>('/settings/users');
-  return data.data;
+export async function listUsers(page = 1) {
+  const { data } = await api.get<{ data: OrgUser[]; meta: { total: number; page: number; pageSize: number } }>('/settings/users', {
+    params: { page },
+  });
+  return data;
 }
 
 export async function updateUserRole(id: string, role: Role) {

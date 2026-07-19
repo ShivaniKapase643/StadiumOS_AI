@@ -24,3 +24,7 @@
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    # connect-src covers both the REST API and the Socket.IO websocket
+    # upgrade, which both run on the same Render origin (see VITE_API_URL /
+    # VITE_SOCKET_URL above). img-src allows Cloudinary-hosted avatars/uploads.
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com; font-src 'self' data:; connect-src 'self' https://stadiumos-ai-rfcy.onrender.com wss://stadiumos-ai-rfcy.onrender.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"

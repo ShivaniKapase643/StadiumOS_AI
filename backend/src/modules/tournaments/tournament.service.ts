@@ -8,11 +8,17 @@ import { SOCKET_EVENTS } from '../../sockets/events';
 // Tournaments / Teams / Players / Referees — CRUD
 // ---------------------------------------------------------------------------
 
-export async function listTournaments() {
-  return prisma.tournament.findMany({
-    include: { teams: true, stadium: true, _count: { select: { fixtures: true } } },
-    orderBy: { startDate: 'desc' },
-  });
+export async function listTournaments(page: number, pageSize: number) {
+  const [items, total] = await Promise.all([
+    prisma.tournament.findMany({
+      include: { teams: true, stadium: true, _count: { select: { fixtures: true } } },
+      orderBy: { startDate: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.tournament.count(),
+  ]);
+  return { items, total, page, pageSize };
 }
 
 export async function createTournament(input: {

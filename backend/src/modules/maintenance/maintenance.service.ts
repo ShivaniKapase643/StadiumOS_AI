@@ -10,6 +10,7 @@ export async function listWorkOrders() {
   return prisma.workOrder.findMany({
     include: { asset: true, assignedTo: { select: { name: true } } },
     orderBy: { createdAt: 'desc' },
+    take: 100,
   });
 }
 

@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { PaginationControls } from '@/components/shared/PaginationControls';
 import { formatDateTime } from '@/lib/utils';
 import { extractErrorMessage } from '@/services/api';
 import * as securityService from '@/services/security.service';
@@ -27,7 +28,9 @@ const SEVERITY_VARIANT: Record<string, 'default' | 'warning' | 'destructive'> = 
 function IncidentsTab() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ type: '', severity: 'MEDIUM', description: '' });
-  const { data: incidents = [] } = useQuery({ queryKey: ['security', 'incidents'], queryFn: securityService.listIncidents });
+  const [page, setPage] = useState(1);
+  const { data } = useQuery({ queryKey: ['security', 'incidents', page], queryFn: () => securityService.listIncidents(page) });
+  const incidents = data?.data ?? [];
 
   const createMutation = useMutation({
     mutationFn: () => securityService.createIncident(form),
@@ -114,6 +117,10 @@ function IncidentsTab() {
           </Table>
         </CardContent>
       </Card>
+
+      {data && data.meta.total > 0 && (
+        <PaginationControls page={data.meta.page} pageSize={data.meta.pageSize} total={data.meta.total} onPageChange={setPage} />
+      )}
     </div>
   );
 }
@@ -162,8 +169,17 @@ function CctvTab() {
       {cameras.map((cam) => (
         <Card
           key={cam.id}
-          className="cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.99]"
+          role="button"
+          tabIndex={0}
+          aria-label={`View ${cam.label} in ${cam.zone.name}, status ${cam.status}`}
+          className="cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           onClick={() => setActiveCamera(cam)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setActiveCamera(cam);
+            }
+          }}
         >
           <CardContent className="flex items-center justify-between p-4">
             <div className="flex items-center gap-2">
@@ -277,7 +293,13 @@ function BroadcastTab() {
             <Label>Audience roles</Label>
             <div className="flex flex-wrap gap-2">
               {ROLE_OPTIONS.map((role) => (
-                <button key={role} type="button" onClick={() => toggleRole(role)} className="focus:outline-none">
+                <button
+                  key={role}
+                  type="button"
+                  onClick={() => toggleRole(role)}
+                  aria-pressed={roles.includes(role)}
+                  className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
                   <Badge variant={roles.includes(role) ? 'default' : 'outline'} className="cursor-pointer">
                     {role}
                   </Badge>

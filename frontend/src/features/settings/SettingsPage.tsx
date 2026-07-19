@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { PaginationControls } from '@/components/shared/PaginationControls';
 import { extractErrorMessage } from '@/services/api';
 import { formatDateTime } from '@/lib/utils';
 import * as settingsService from '@/services/settings.service';
@@ -61,7 +62,9 @@ const ROLE_OPTIONS: Role[] = [
 
 function UsersTab() {
   const queryClient = useQueryClient();
-  const { data: users = [] } = useQuery({ queryKey: ['settings', 'users'], queryFn: settingsService.listUsers });
+  const [page, setPage] = useState(1);
+  const { data } = useQuery({ queryKey: ['settings', 'users', page], queryFn: () => settingsService.listUsers(page) });
+  const users = data?.data ?? [];
 
   const roleMutation = useMutation({
     mutationFn: ({ id, role }: { id: string; role: Role }) => settingsService.updateUserRole(id, role),
@@ -82,7 +85,7 @@ function UsersTab() {
           <UsersIcon className="h-4 w-4" /> Users
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
         <Table>
           <TableHeader>
             <TableRow>
@@ -120,6 +123,12 @@ function UsersTab() {
             ))}
           </TableBody>
         </Table>
+        <PaginationControls
+          page={data?.meta.page ?? 1}
+          pageSize={data?.meta.pageSize ?? 20}
+          total={data?.meta.total ?? 0}
+          onPageChange={setPage}
+        />
       </CardContent>
     </Card>
   );
@@ -232,24 +241,12 @@ function AuditLogsTab() {
             ))}
           </TableBody>
         </Table>
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            Page {data?.meta.page ?? 1} of {Math.max(1, Math.ceil((data?.meta.total ?? 0) / (data?.meta.pageSize ?? 20)))}
-          </span>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              Previous
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!data || page * data.meta.pageSize >= data.meta.total}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <PaginationControls
+          page={data?.meta.page ?? 1}
+          pageSize={data?.meta.pageSize ?? 20}
+          total={data?.meta.total ?? 0}
+          onPageChange={setPage}
+        />
       </CardContent>
     </Card>
   );

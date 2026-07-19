@@ -30,7 +30,12 @@ export async function updateInventoryItem(userId: string, itemId: string, input:
 
 export async function getMyOrders(userId: string) {
   const vendor = await requireVendorForUser(userId);
-  return prisma.foodOrder.findMany({ where: { vendorId: vendor.id }, include: { user: { select: { name: true } } }, orderBy: { createdAt: 'desc' } });
+  return prisma.foodOrder.findMany({
+    where: { vendorId: vendor.id },
+    include: { user: { select: { name: true } } },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+  });
 }
 
 export async function updateOrderStatus(userId: string, orderId: string, status: 'PLACED' | 'PREPARING' | 'READY' | 'DELIVERED' | 'CANCELLED') {

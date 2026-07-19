@@ -4,11 +4,17 @@ import { LostFoundStatus, OrderStatus, SeatTier } from '@prisma/client';
 
 // Lost & Found -----------------------------------------------------------
 
-export async function listLostFoundItems() {
-  return prisma.lostFoundItem.findMany({
-    include: { reporter: { select: { name: true } } },
-    orderBy: { createdAt: 'desc' },
-  });
+export async function listLostFoundItems(page: number, pageSize: number) {
+  const [items, total] = await Promise.all([
+    prisma.lostFoundItem.findMany({
+      include: { reporter: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.lostFoundItem.count(),
+  ]);
+  return { items, total, page, pageSize };
 }
 
 export async function createLostFoundItem(reporterId: string, input: { description: string; category: string; location?: string }) {

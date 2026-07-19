@@ -66,6 +66,8 @@ export function SeatMap({ seats, selectedSeatIds, onToggleSeat, maxSelectable }:
                           disabled={disabled}
                           onClick={() => onToggleSeat(seat)}
                           title={`${section}-${row}${seat.number} (${seat.tier})`}
+                          aria-label={`Seat ${section}-${row}${seat.number}, ${seat.tier}${seat.isBooked ? ', already booked' : isSelected ? ', selected' : ''}`}
+                          aria-pressed={isSelected}
                           className={cn(
                             'h-6 w-6 shrink-0 rounded-sm border text-[9px] font-medium transition-colors disabled:cursor-not-allowed',
                             seat.isBooked ? 'bg-muted text-muted-foreground' : TIER_COLOR[seat.tier],

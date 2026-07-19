@@ -26,9 +26,12 @@ export interface FoodOrderDto {
   createdAt: string;
 }
 
-export async function listLostFound() {
-  const { data } = await api.get<{ data: LostFoundItemDto[] }>('/fan-experience/lost-found');
-  return data.data;
+export async function listLostFound(page = 1) {
+  const { data } = await api.get<{ data: LostFoundItemDto[]; meta: { total: number; page: number; pageSize: number } }>(
+    '/fan-experience/lost-found',
+    { params: { page } }
+  );
+  return data;
 }
 
 export async function reportLostFound(input: { description: string; category: string; location?: string }) {

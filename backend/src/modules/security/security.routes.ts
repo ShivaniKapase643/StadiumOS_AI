@@ -5,7 +5,8 @@ import { asyncHandler } from '../../utils/asyncHandler';
 import { requireAuth } from '../../middleware/auth';
 import { requireRole } from '../../middleware/rbac';
 import { validate } from '../../middleware/validate';
-import { ApiError, created, ok } from '../../utils/apiResponse';
+import { ApiError, created, ok, paginated } from '../../utils/apiResponse';
+import { parsePagination } from '../../utils/pagination';
 import * as securityService from './security.service';
 import { logAudit } from '../users/audit.service';
 
@@ -41,7 +42,15 @@ const createBroadcastSchema = z.object({
  *     summary: "List security incidents"
  *     tags: [Security]
  */
-router.get('/incidents', requireRole(...SECURITY_ROLES), asyncHandler(async (_req, res) => ok(res, await securityService.listIncidents())));
+router.get(
+  '/incidents',
+  requireRole(...SECURITY_ROLES),
+  asyncHandler(async (req, res) => {
+    const { page, pageSize } = parsePagination(req);
+    const result = await securityService.listIncidents(page, pageSize);
+    paginated(res, result.items, { total: result.total, page: result.page, pageSize: result.pageSize });
+  })
+);
 
 /**
  * @openapi

@@ -6,6 +6,7 @@ import { requireAuth } from '../../middleware/auth';
 import { requireRole } from '../../middleware/rbac';
 import { validate } from '../../middleware/validate';
 import { ApiError, created, ok, paginated } from '../../utils/apiResponse';
+import { parsePagination } from '../../utils/pagination';
 import { prisma } from '../../config/db';
 import * as settingsService from './settings.service';
 import { logAudit } from '../users/audit.service';
@@ -66,7 +67,15 @@ router.patch(
  *     summary: "List all users"
  *     tags: [Settings]
  */
-router.get('/users', requireRole(...ADMIN_ROLES), asyncHandler(async (_req, res) => ok(res, await settingsService.listUsers())));
+router.get(
+  '/users',
+  requireRole(...ADMIN_ROLES),
+  asyncHandler(async (req, res) => {
+    const { page, pageSize } = parsePagination(req);
+    const result = await settingsService.listUsers(page, pageSize);
+    paginated(res, result.items, { total: result.total, page: result.page, pageSize: result.pageSize });
+  })
+);
 
 /**
  * @openapi
@@ -163,8 +172,7 @@ router.get(
   '/audit-logs',
   requireRole(...ADMIN_ROLES),
   asyncHandler(async (req, res) => {
-    const page = Number(req.query.page ?? 1);
-    const pageSize = Number(req.query.pageSize ?? 20);
+    const { page, pageSize } = parsePagination(req);
     const result = await settingsService.getAuditLogs(page, pageSize);
     paginated(res, result.items, { total: result.total, page: result.page, pageSize: result.pageSize });
   })

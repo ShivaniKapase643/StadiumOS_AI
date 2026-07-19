@@ -4,11 +4,17 @@ import { IncidentSeverity, IncidentStatus, Role } from '@prisma/client';
 import { emitToAll } from '../../sockets';
 import { SOCKET_EVENTS } from '../../sockets/events';
 
-export async function listIncidents() {
-  return prisma.incident.findMany({
-    include: { reportedBy: { select: { name: true } }, assignedTo: { select: { name: true } }, zone: true },
-    orderBy: { createdAt: 'desc' },
-  });
+export async function listIncidents(page: number, pageSize: number) {
+  const [items, total] = await Promise.all([
+    prisma.incident.findMany({
+      include: { reportedBy: { select: { name: true } }, assignedTo: { select: { name: true } }, zone: true },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.incident.count(),
+  ]);
+  return { items, total, page, pageSize };
 }
 
 export async function createIncident(

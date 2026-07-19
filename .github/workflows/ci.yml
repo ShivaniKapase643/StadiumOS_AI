@@ -8,7 +8,7 @@ on:
 
 jobs:
   backend:
-    name: Backend (typecheck, unit + integration tests, build)
+    name: Backend (typecheck, lint, unit + integration tests, build)
     runs-on: ubuntu-latest
 
     services:
@@ -54,6 +54,10 @@ jobs:
       - name: Typecheck
         working-directory: backend
         run: npm run typecheck
+
+      - name: Lint
+        working-directory: backend
+        run: npm run lint
 
       - name: Unit tests
         working-directory: backend
