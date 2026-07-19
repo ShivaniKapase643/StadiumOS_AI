@@ -65,8 +65,10 @@ export const env = {
     },
   },
 
-  // Default raised from 6s to 20s — the simulator's frequent small writes were
-  // a major contributor to burning through Neon's free-tier monthly network
-  // transfer allowance during heavy testing. 20s still feels "live" in the UI.
-  simulatorIntervalMs: Number(process.env.SIMULATOR_INTERVAL_MS ?? 20000),
+  // Raised 6s -> 20s -> 45s: the simulator's frequent small writes, running
+  // continuously in production, were the main driver of Neon free-tier
+  // network-transfer exhaustion — twice now. 45s is still clearly "live" in
+  // the UI while cutting simulator-driven DB traffic by more than half again
+  // versus the 20s default.
+  simulatorIntervalMs: Number(process.env.SIMULATOR_INTERVAL_MS ?? 45000),
 };
