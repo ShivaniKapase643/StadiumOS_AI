@@ -1,6 +1,9 @@
 # Smart Stadium OS + Digital Twin
 
 [![CI](https://github.com/ShivaniKapase643/StadiumOS_AI/actions/workflows/ci.yml/badge.svg)](https://github.com/ShivaniKapase643/StadiumOS_AI/actions/workflows/ci.yml)
+![Node](https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-both%20apps-3178C6?logo=typescript&logoColor=white)
+![Modules](https://img.shields.io/badge/modules-16%2F16%20live-2a78d6)
 
 **An AI-powered intelligent stadium and tournament operations platform.**
 
@@ -12,6 +15,27 @@ Smart Ticketing); the remaining twelve are lightweight-but-real screens (real DB
 routes, real forms/actions) rather than dedicated deep modules. A public Landing Page, a one-click
 **Live Demo mode**, a stadium-operator **Command Center**, and a rule-based **AI Insights** engine
 sit on top of all of it.
+
+## Contents
+
+- [Architecture](#architecture)
+- [What's real vs. what's simulated](#whats-real-vs-whats-simulated)
+- [Module depth](#module-depth)
+- [Tech stack](#tech-stack)
+- [Project structure](#project-structure)
+- [Roles](#roles)
+- [Local setup](#local-setup)
+- [Security](#security)
+- [Scripts](#scripts-root)
+- [Testing](#testing)
+- [Deployment](#deployment)
+
+## Architecture
+
+End-to-end request/data flow — client through hosting, application, data, background/simulated
+services, optional external integrations, and the CI/CD pipeline that ships all of it.
+
+![System architecture diagram](./docs/diagrams/architecture.png)
 
 ## What's real vs. what's simulated
 
@@ -50,6 +74,8 @@ real CSV/PDF files).
 
 ## Tech stack
 
+![Tech stack diagram](./docs/diagrams/tech-stack.png)
+
 **Frontend** — React 19, Vite, TypeScript, Tailwind CSS, shadcn/ui-style components, React Router,
 TanStack Query, Framer Motion, Recharts, React Hook Form + Zod, Axios, Leaflet + react-leaflet
 (indoor `CRS.Simple` map) + leaflet.heat, Socket.IO client, html5-qrcode, jsPDF (report export).
@@ -60,6 +86,8 @@ Cloudinary, Nodemailer, Swagger (OpenAPI) docs.
 **Deployment** — Frontend on Netlify, backend on Render, database on Neon/Supabase/Render Postgres.
 
 ## Project structure
+
+![Project folder structure diagram](./docs/diagrams/project-structure.png)
 
 ```
 StadiumOS_AI/
@@ -223,23 +251,26 @@ npm run test:coverage         # with a v8 coverage report
 Mocking: the ticketing integration suite mocks `payment.service` (an intentionally-random ~92%
 success simulator) so payment-success and payment-decline paths are deterministic instead of
 flaky; a separate unit suite mocks Prisma entirely to pin down `createBooking`'s validation/conflict
-branches and `auth.service`'s edge cases in isolation, in milliseconds, with no database.
+branches and `auth.service`'s edge cases in isolation, in milliseconds, with no database. The same
+mocked-service pattern extends to every route/controller file too (`*.routes.test.ts`): each
+module's service layer is mocked and driven through the *real* Express app (`createApp()`) via
+Supertest, with locally-forged JWTs (`requireAuth` only checks the signature, never the DB) — so
+the full middleware chain (Helmet, CORS, rate limiting, auth, RBAC, Zod validation, error handling)
+executes for real, with no live Postgres required for any of it.
 
 **Coverage, honestly reported** (v8, `coverage.all: true` so untested files count as 0% rather
 than being silently omitted — see each `vitest.config.ts`):
 
 | | Statements | Notes |
 |---|---|---|
-| Backend, unit suite only | ~8% | Low in isolation because most business logic is exercised by the *integration* suite instead (real DB, not mocked) — Vitest doesn't currently merge unit + integration coverage into one number in this setup. |
-| Frontend | ~6% | 6 feature-level pages/hooks/components have real tests; the remaining ~15 feature pages, most services, and all dialogs are untested. |
+| Backend, unit suite only | ~65% | 334 tests across 47 files. Closed 39 of 42 files that had zero unit coverage — `app.ts`, all 16 route modules, every controller, and the shared middleware stack (auth/rbac/validate/errorHandler) — by mocking the service layer and driving requests through the real app via Supertest. Only 3 files remain untested: a background `setInterval` job (`liveDataSimulator.ts`) and two thin external-SDK wrappers (Cloudinary, Multer upload config). |
+| Frontend | ~6% | 6 feature-level pages/hooks/components have real tests; the remaining ~15 feature pages, most services, and all dialogs are untested — the next highest-leverage gap. |
 
 These are not 95%+, and this README won't claim otherwise. The integration suite (auth, ticketing,
-tournaments, twin, security, emergency, parking — ~65 assertions across 8 files) covers meaningfully
-more real business logic than the unit-coverage number alone suggests, but an honest single number
-for "how much of this app is tested" is still low. The highest-leverage next additions would be
-integration tests for the remaining untested backend services (dashboard, fan-experience, vendor,
-maintenance, notifications, reports, sustainability, ai) and component tests for the untested
-frontend feature pages.
+tournaments, twin, security, emergency, parking — ~65 assertions across 8 files) covers real
+business logic against a genuine Postgres container in CI, on top of the unit-level numbers above.
+The clearest remaining gap is the frontend: most feature pages, services, and dialogs still have no
+component-level tests.
 
 ## Deployment
 
